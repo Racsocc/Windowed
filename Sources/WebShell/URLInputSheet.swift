@@ -8,6 +8,7 @@ struct URLInputSheet: View {
     @State private var inputURL: String = ""
     @State private var inputName: String = ""
     @State private var iconPath: String = ""
+    @State private var presetsVersion: Int = 0
 
     var body: some View {
         VStack(spacing: 0) {
@@ -26,6 +27,7 @@ struct URLInputSheet: View {
                 }
 
                 let presets = loadPresets()
+                let _ = presetsVersion  // force re-render on delete
                 if !presets.isEmpty {
                     Section("History") {
                         ForEach(presets, id: \.url) { entry in
@@ -37,6 +39,13 @@ struct URLInputSheet: View {
                                 presetRow(entry)
                             }
                             .buttonStyle(.plain)
+                            .contextMenu {
+                                Button(role: .destructive) {
+                                    deletePreset(url: entry.url)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
                         }
                     }
                 }
@@ -139,8 +148,8 @@ struct URLInputSheet: View {
 
     private var presetsHeight: CGFloat {
         let count = loadPresets().count
-        if count == 0 { return 120 }
-        return CGFloat(120 + min(count, 5) * 40)
+        if count == 0 { return 180 }
+        return CGFloat(200 + min(count, 5) * 48)
     }
 
     private func saveAndClose() {
@@ -159,6 +168,14 @@ struct URLInputSheet: View {
             return []
         }
         return list
+    }
+
+    private func deletePreset(url: String) {
+        var list = loadPresets().filter { $0.url != url }
+        if let data = try? JSONEncoder().encode(list) {
+            UserDefaults.standard.set(data, forKey: "urlPresets")
+        }
+        presetsVersion += 1
     }
 
     private func savePreset(url: String, name: String) {
