@@ -10,6 +10,8 @@ struct WebView: NSViewRepresentable {
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.allowsMagnification = true
         webView.navigationDelegate = context.coordinator
+        // Kill the white flash / 1px border
+        webView.setValue(false, forKey: "drawsBackground")
         return webView
     }
 
