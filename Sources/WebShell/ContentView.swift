@@ -35,6 +35,7 @@ struct ContentView: View {
                 .disabled(currentURL.isEmpty)
             }
         }
+        .background(ToolbarSeparatorHider())
         .frame(minWidth: 800, minHeight: 500)
         .onAppear {
             if !savedURL.isEmpty {
@@ -79,5 +80,24 @@ struct ContentView: View {
             return host + (u.path == "/" ? "" : u.path)
         }
         return currentURL.isEmpty ? "Windowed" : currentURL
+    }
+}
+
+// Hides the 1px toolbar separator via AppKit
+struct ToolbarSeparatorHider: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        DispatchQueue.main.async {
+            if let window = view.window {
+                window.titlebarSeparatorStyle = .none
+            }
+        }
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        if let window = nsView.window {
+            window.titlebarSeparatorStyle = .none
+        }
     }
 }
