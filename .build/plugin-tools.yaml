@@ -1,0 +1,81 @@
+client:
+  name: basic
+  file-system: device-agnostic
+tools: {}
+targets:
+  "PackageStructure": ["<PackageStructure>"]
+  "Windowed-arm64-apple-macosx-debug.exe": ["<Windowed-arm64-apple-macosx-debug.exe>"]
+  "Windowed-arm64-apple-macosx-debug.module": ["<Windowed-arm64-apple-macosx-debug.module>"]
+  "main": ["<Windowed-arm64-apple-macosx-debug.exe>","<Windowed-arm64-apple-macosx-debug.module>"]
+  "test": ["<Windowed-arm64-apple-macosx-debug.exe>","<Windowed-arm64-apple-macosx-debug.module>"]
+default: "main"
+nodes:
+  "/Users/oscar/Windowed/Sources/WebShell/":
+    is-directory-structure: true
+    content-exclusion-patterns: [".git",".build"]
+  "/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed":
+    is-mutated: true
+commands:
+  "/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed-entitlement.plist":
+    tool: write-auxiliary-file
+    inputs: ["<entitlement-plist>","<com.apple.security.get-task-allow>"]
+    outputs: ["/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed-entitlement.plist"]
+    description: "Write auxiliary file /Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed-entitlement.plist"
+
+  "/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.build/sources":
+    tool: write-auxiliary-file
+    inputs: ["<sources-file-list>","/Users/oscar/Windowed/Sources/WebShell/App.swift","/Users/oscar/Windowed/Sources/WebShell/ContentView.swift","/Users/oscar/Windowed/Sources/WebShell/URLInputSheet.swift","/Users/oscar/Windowed/Sources/WebShell/WebView.swift"]
+    outputs: ["/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.build/sources"]
+    description: "Write auxiliary file /Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.build/sources"
+
+  "/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.product/Objects.LinkFileList":
+    tool: write-auxiliary-file
+    inputs: ["<link-file-list>","/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.build/App.swift.o","/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.build/ContentView.swift.o","/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.build/URLInputSheet.swift.o","/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.build/WebView.swift.o"]
+    outputs: ["/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.product/Objects.LinkFileList"]
+    description: "Write auxiliary file /Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.product/Objects.LinkFileList"
+
+  "/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt":
+    tool: write-auxiliary-file
+    inputs: ["<swift-get-version>","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"]
+    outputs: ["/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"]
+    always-out-of-date: "true"
+    description: "Write auxiliary file /Users/oscar/Windowed/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+
+  "<Windowed-arm64-apple-macosx-debug.exe>":
+    tool: phony
+    inputs: ["<Windowed-arm64-apple-macosx-debug.exe-CodeSigning>"]
+    outputs: ["<Windowed-arm64-apple-macosx-debug.exe>"]
+
+  "<Windowed-arm64-apple-macosx-debug.module>":
+    tool: phony
+    inputs: ["/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.build/App.swift.o","/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.build/ContentView.swift.o","/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.build/URLInputSheet.swift.o","/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.build/WebView.swift.o","/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Modules/Windowed.swiftmodule"]
+    outputs: ["<Windowed-arm64-apple-macosx-debug.module>"]
+
+  "C.Windowed-arm64-apple-macosx-debug.exe":
+    tool: shell
+    inputs: ["/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.build/App.swift.o","/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.build/ContentView.swift.o","/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.build/URLInputSheet.swift.o","/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.build/WebView.swift.o","/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.product/Objects.LinkFileList"]
+    outputs: ["/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed"]
+    description: "Linking ./.build/arm64-apple-macosx/debug/Windowed"
+    args: ["/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc","-L","/Users/oscar/Windowed/.build/arm64-apple-macosx/debug","-o","/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed","-module-name","Windowed","-Xlinker","-no_warn_duplicate_libraries","-emit-executable","-Xlinker","-alias","-Xlinker","_Windowed_main","-Xlinker","_main","-Xlinker","-rpath","-Xlinker","@loader_path","@/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.product/Objects.LinkFileList","-Xlinker","-rpath","-Xlinker","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-6.2/macosx","-target","arm64-apple-macosx14.0","-framework","WebKit","-Xlinker","-add_ast_path","-Xlinker","/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Modules/Windowed.swiftmodule","-plugin-path","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing","-sdk","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-I","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-L","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-g"]
+
+  "C.Windowed-arm64-apple-macosx-debug.exe-entitlements":
+    tool: shell
+    inputs: ["/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed","/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed-entitlement.plist"]
+    outputs: ["<Windowed-arm64-apple-macosx-debug.exe-CodeSigning>"]
+    description: "Applying debug entitlements to ./.build/arm64-apple-macosx/debug/Windowed"
+    args: ["codesign","--force","--sign","-","--entitlements","/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed-entitlement.plist","/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed"]
+
+  "C.Windowed-arm64-apple-macosx-debug.module":
+    tool: shell
+    inputs: ["/Users/oscar/Windowed/Sources/WebShell/App.swift","/Users/oscar/Windowed/Sources/WebShell/ContentView.swift","/Users/oscar/Windowed/Sources/WebShell/URLInputSheet.swift","/Users/oscar/Windowed/Sources/WebShell/WebView.swift","/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt","/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.build/sources"]
+    outputs: ["/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.build/App.swift.o","/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.build/ContentView.swift.o","/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.build/URLInputSheet.swift.o","/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.build/WebView.swift.o","/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Modules/Windowed.swiftmodule"]
+    description: "Compiling Swift Module 'Windowed' (4 sources)"
+    args: ["/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc","-module-name","Windowed","-emit-dependencies","-emit-module","-emit-module-path","/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Modules/Windowed.swiftmodule","-output-file-map","/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.build/output-file-map.json","-incremental","-c","@/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.build/sources","-I","/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Modules","-target","arm64-apple-macosx14.0","-incremental","-enable-batch-mode","-serialize-diagnostics","-index-store-path","/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/index/store","-Onone","-enable-testing","-j10","-DSWIFT_PACKAGE","-DDEBUG","-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE","-module-cache-path","/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/ModuleCache","-parseable-output","-Xfrontend","-entry-point-function-name","-Xfrontend","Windowed_main","-swift-version","5","-plugin-path","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing","-sdk","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-I","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-L","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-g","-Xcc","-isysroot","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk","-Xcc","-F","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-Xcc","-fPIC","-Xcc","-g","-package-name","windowed"]
+
+  "PackageStructure":
+    tool: package-structure-tool
+    inputs: ["/Users/oscar/Windowed/Sources/WebShell/","/Users/oscar/Windowed/Package.swift","/Users/oscar/Windowed/Package.resolved"]
+    outputs: ["<PackageStructure>"]
+    description: "Planning build"
+    allow-missing-inputs: true
+

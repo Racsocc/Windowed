@@ -8,7 +8,6 @@ struct WindowedApp: App {
     @State private var showURLSheet: Bool = false
 
     init() {
-        // Load custom icon on launch
         if let path = UserDefaults.standard.string(forKey: "customIconPath"),
            !path.isEmpty, let img = NSImage(contentsOfFile: path) {
             NSApplication.shared.applicationIconImage = img
@@ -27,9 +26,10 @@ struct WindowedApp: App {
                     URLInputSheet(savedURL: $savedURL, savedName: $savedName, isPresented: $showURLSheet)
                 }
         }
+        .windowStyle(.automatic)
         .commands {
             CommandGroup(after: .newItem) {
-                Button("Change URL...") {
+                Button("Change URL…") {
                     showURLSheet = true
                 }
                 .keyboardShortcut("u", modifiers: .command)

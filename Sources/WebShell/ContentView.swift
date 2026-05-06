@@ -7,21 +7,9 @@ struct ContentView: View {
     @State private var currentURL: String = ""
 
     var body: some View {
-        VStack(spacing: 0) {
+        Group {
             if currentURL.isEmpty {
-                VStack(spacing: 16) {
-                    Image(systemName: "globe")
-                        .font(.system(size: 48))
-                        .foregroundColor(.secondary)
-                    Text("No URL configured")
-                        .font(.title2)
-                        .foregroundColor(.secondary)
-                    Button("Set URL") {
-                        showURLSheet = true
-                    }
-                    .buttonStyle(.borderedProminent)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                emptyState
             } else {
                 WebView(urlString: currentURL)
                     .ignoresSafeArea()
@@ -30,17 +18,17 @@ struct ContentView: View {
         .navigationTitle(displayTitle)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button(action: {
+                Button {
                     showURLSheet = true
-                }) {
+                } label: {
                     Image(systemName: "gear")
                 }
                 .help("Change URL")
             }
             ToolbarItem(placement: .primaryAction) {
-                Button(action: {
+                Button {
                     currentURL = savedURL
-                }) {
+                } label: {
                     Image(systemName: "arrow.clockwise")
                 }
                 .help("Reload")
@@ -60,6 +48,29 @@ struct ContentView: View {
         }
     }
 
+    // MARK: - Empty State
+
+    private var emptyState: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "globe")
+                .font(.system(size: 44, weight: .light))
+                .foregroundStyle(.quaternary)
+
+            Text("No URL Configured")
+                .font(.title3)
+                .foregroundStyle(.secondary)
+
+            Button("Set URL…") {
+                showURLSheet = true
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.regular)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    // MARK: - Title
+
     private var displayTitle: String {
         if !savedName.isEmpty {
             return savedName
@@ -67,6 +78,6 @@ struct ContentView: View {
         if let u = URL(string: currentURL), let host = u.host {
             return host + (u.path == "/" ? "" : u.path)
         }
-        return currentURL.isEmpty ? "WebShell" : currentURL
+        return currentURL.isEmpty ? "Windowed" : currentURL
     }
 }

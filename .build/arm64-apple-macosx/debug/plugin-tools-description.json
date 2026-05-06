@@ -1,0 +1,308 @@
+{
+  "builtTestProducts" : [
+
+  ],
+  "copyCommands" : {
+
+  },
+  "explicitTargetDependencyImportCheckingMode" : {
+    "none" : {
+
+    }
+  },
+  "generatedSourceTargetSet" : [
+
+  ],
+  "pluginDescriptions" : [
+
+  ],
+  "swiftCommands" : {
+    "C.Windowed-arm64-apple-macosx-debug.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.build/sources",
+      "importPath" : "/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/oscar/Windowed/Sources/WebShell/App.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oscar/Windowed/Sources/WebShell/ContentView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oscar/Windowed/Sources/WebShell/URLInputSheet.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oscar/Windowed/Sources/WebShell/WebView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.build/sources"
+        }
+      ],
+      "isLibrary" : false,
+      "moduleName" : "Windowed",
+      "moduleOutputPath" : "/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Modules/Windowed.swiftmodule",
+      "objects" : [
+        "/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.build/App.swift.o",
+        "/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.build/ContentView.swift.o",
+        "/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.build/URLInputSheet.swift.o",
+        "/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.build/WebView.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx14.0",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-j10",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-Xfrontend",
+        "-entry-point-function-name",
+        "-Xfrontend",
+        "Windowed_main",
+        "-swift-version",
+        "5",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "windowed"
+      ],
+      "outputFileMapPath" : "/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.build/App.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.build/ContentView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.build/URLInputSheet.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.build/WebView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Modules/Windowed.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/oscar/Windowed/Sources/WebShell/App.swift",
+        "/Users/oscar/Windowed/Sources/WebShell/ContentView.swift",
+        "/Users/oscar/Windowed/Sources/WebShell/URLInputSheet.swift",
+        "/Users/oscar/Windowed/Sources/WebShell/WebView.swift"
+      ],
+      "tempsPath" : "/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.build",
+      "wholeModuleOptimization" : false
+    }
+  },
+  "swiftFrontendCommands" : {
+
+  },
+  "swiftTargetScanArgs" : {
+    "Windowed" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "Windowed",
+      "-package-name",
+      "windowed",
+      "-c",
+      "/Users/oscar/Windowed/Sources/WebShell/App.swift",
+      "/Users/oscar/Windowed/Sources/WebShell/ContentView.swift",
+      "/Users/oscar/Windowed/Sources/WebShell/URLInputSheet.swift",
+      "/Users/oscar/Windowed/Sources/WebShell/WebView.swift",
+      "-I",
+      "/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx14.0",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-j10",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-Xfrontend",
+      "-entry-point-function-name",
+      "-Xfrontend",
+      "Windowed_main",
+      "-swift-version",
+      "5",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "windowed",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ]
+  },
+  "targetDependencyMap" : {
+    "Windowed" : [
+
+    ]
+  },
+  "testDiscoveryCommands" : {
+
+  },
+  "testEntryPointCommands" : {
+
+  },
+  "traitConfiguration" : {
+    "default" : {
+
+    }
+  },
+  "writeCommands" : {
+    "/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed-entitlement.plist" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<entitlement-plist>"
+        },
+        {
+          "kind" : "virtual",
+          "name" : "<com.apple.security.get-task-allow>"
+        }
+      ],
+      "outputFilePath" : "/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed-entitlement.plist"
+    },
+    "/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oscar/Windowed/Sources/WebShell/App.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oscar/Windowed/Sources/WebShell/ContentView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oscar/Windowed/Sources/WebShell/URLInputSheet.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oscar/Windowed/Sources/WebShell/WebView.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.build/sources"
+    },
+    "/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.product/Objects.LinkFileList" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<link-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.build/App.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.build/ContentView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.build/URLInputSheet.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.build/WebView.swift.o"
+        }
+      ],
+      "outputFilePath" : "/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/Windowed.product/Objects.LinkFileList"
+    },
+    "/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt" : {
+      "alwaysOutOfDate" : true,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<swift-get-version>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+        }
+      ],
+      "outputFilePath" : "/Users/oscar/Windowed/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+    }
+  }
+}

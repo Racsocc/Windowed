@@ -10,117 +10,115 @@ struct URLInputSheet: View {
     @State private var iconPath: String = ""
 
     var body: some View {
-        VStack(spacing: 20) {
-            // Icon preview
-            VStack(spacing: 8) {
-                if let icon = loadIcon() {
-                    Image(nsImage: icon)
-                        .resizable()
-                        .frame(width: 64, height: 64)
-                        .cornerRadius(14)
-                } else {
-                    Image(systemName: "globe")
-                        .font(.system(size: 48))
-                        .foregroundColor(.accentColor)
-                }
+        VStack(spacing: 0) {
+            // Icon area — subtle, centered
+            iconSection
+                .padding(.top, 24)
+                .padding(.bottom, 20)
 
-                Button(action: pickIcon) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "photo")
-                            .font(.caption)
-                        Text(iconPath.isEmpty ? "Set App Icon" : "Change Icon")
-                            .font(.caption)
-                    }
-                }
-                .buttonStyle(.plain)
-                .foregroundColor(.accentColor)
-
-                if !iconPath.isEmpty {
-                    Button(action: {
-                        iconPath = ""
-                        UserDefaults.standard.removeObject(forKey: "customIconPath")
-                        setAppIcon(nil)
-                    }) {
-                        Text("Remove Icon")
-                            .font(.caption2)
-                            .foregroundColor(.red)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-
-            VStack(alignment: .leading, spacing: 12) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Display Name")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    TextField("e.g. Hermes WebUI", text: $inputName)
-                        .textFieldStyle(.roundedBorder)
-                }
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("URL")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    TextField("http://127.0.0.1:8787", text: $inputURL)
-                        .textFieldStyle(.roundedBorder)
+            // Form fields
+            Form {
+                Section {
+                    TextField("Display Name", text: $inputName, prompt: Text("e.g. Hermes WebUI"))
+                    TextField("URL", text: $inputURL, prompt: Text("http://127.0.0.1:8787"))
                         .font(.system(.body, design: .monospaced))
                         .onSubmit { saveAndClose() }
                 }
 
                 let presets = loadPresets()
                 if !presets.isEmpty {
-                    Divider()
-                    Text("History:")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    ForEach(presets, id: \.url) { entry in
-                        Button(action: {
-                            inputURL = entry.url
-                            inputName = entry.name
-                            saveAndClose()
-                        }) {
-                            HStack {
-                                Image(systemName: "clock.arrow.circlepath")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                Text(entry.name.isEmpty ? entry.url : entry.name)
-                                    .font(.caption)
-                                    .lineLimit(1)
-                                Spacer()
-                                Text(entry.url)
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                                    .lineLimit(1)
-                                    .truncationMode(.middle)
+                    Section("Recent") {
+                        ForEach(presets, id: \.url) { entry in
+                            Button {
+                                inputURL = entry.url
+                                inputName = entry.name
+                                saveAndClose()
+                            } label: {
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(entry.name.isEmpty ? entry.url : entry.name)
+                                            .foregroundStyle(.primary)
+                                        Text(entry.url)
+                                            .font(.caption)
+                                            .foregroundStyle(.tertiary)
+                                            .lineLimit(1)
+                                            .truncationMode(.middle)
+                                    }
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption2)
+                                        .foregroundStyle(.quaternary)
+                                }
                             }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
-                        .foregroundColor(.accentColor)
                     }
                 }
             }
-            .frame(width: 400)
+            .formStyle(.grouped)
+            .scrollContentBackground(.hidden)
+            .frame(width: 420, height: presetsHeight)
 
+            // Bottom buttons
             HStack {
-                Button("Cancel") {
-                    isPresented = false
-                }
-                .keyboardShortcut(.cancelAction)
-
-                Button("Go") {
-                    saveAndClose()
-                }
-                .keyboardShortcut(.defaultAction)
-                .disabled(inputURL.trimmingCharacters(in: .whitespaces).isEmpty)
+                Button("Cancel") { isPresented = false }
+                    .keyboardShortcut(.cancelAction)
+                Spacer()
+                Button("Open") { saveAndClose() }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(inputURL.trimmingCharacters(in: .whitespaces).isEmpty)
             }
+            .padding(20)
         }
-        .padding(30)
+        .frame(width: 420)
         .onAppear {
             inputURL = savedURL
             inputName = savedName
             iconPath = UserDefaults.standard.string(forKey: "customIconPath") ?? ""
         }
+    }
+
+    // MARK: - Icon Section
+
+    private var iconSection: some View {
+        VStack(spacing: 8) {
+            if let icon = loadIcon() {
+                Image(nsImage: icon)
+                    .resizable()
+                    .frame(width: 56, height: 56)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            } else {
+                Image(systemName: "globe")
+                    .font(.system(size: 40, weight: .light))
+                    .foregroundStyle(.tertiary)
+            }
+
+            HStack(spacing: 12) {
+                Button(iconPath.isEmpty ? "Set Icon…" : "Change…") { pickIcon() }
+                    .buttonStyle(.plain)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                if !iconPath.isEmpty {
+                    Button("Remove") {
+                        iconPath = ""
+                        UserDefaults.standard.removeObject(forKey: "customIconPath")
+                        setAppIcon(nil)
+                    }
+                    .buttonStyle(.plain)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                }
+            }
+        }
+    }
+
+    // MARK: - Helpers
+
+    private var presetsHeight: CGFloat {
+        let count = loadPresets().count
+        if count == 0 { return 130 }
+        return CGFloat(130 + min(count, 5) * 44)
     }
 
     private func saveAndClose() {
@@ -158,7 +156,6 @@ struct URLInputSheet: View {
         panel.message = "Choose an image for the app icon"
 
         if panel.runModal() == .OK, let url = panel.url {
-            // Copy to app support
             let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
             let dir = support.appendingPathComponent("WebShell")
             try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)

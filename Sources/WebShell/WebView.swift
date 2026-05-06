@@ -42,11 +42,12 @@ struct WebView: NSViewRepresentable {
 
         private func showError(_ webView: WKWebView, error: Error) {
             let html = """
-            <html><body style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:-apple-system,sans-serif;background:#1a1a1a;color:#ccc;">
-            <div style="text-align:center">
-            <h2>⚠️ Connection Failed</h2>
-            <p>\(error.localizedDescription)</p>
-            <p style="color:#666">Check if the server is running and the URL is correct.</p>
+            <html><body style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:-apple-system,sans-serif;background:#fefefe;color:#333;">
+            <div style="text-align:center;max-width:360px">
+            <div style="font-size:48px;opacity:0.2;margin-bottom:16px">⚠️</div>
+            <h2 style="font-weight:500;font-size:18px;margin:0 0 8px">Connection Failed</h2>
+            <p style="font-size:13px;color:#666;margin:0 0 24px">\(error.localizedDescription)</p>
+            <p style="font-size:12px;color:#999">Check if the server is running and the URL is correct.</p>
             </div></body></html>
             """
             webView.loadHTMLString(html, baseURL: nil)
