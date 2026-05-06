@@ -11,44 +11,30 @@ struct URLInputSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Icon area — subtle, centered
+            // Icon
             iconSection
-                .padding(.top, 24)
-                .padding(.bottom, 20)
+                .padding(.top, 28)
+                .padding(.bottom, 24)
 
-            // Form fields
+            // Fields
             Form {
                 Section {
-                    TextField("Display Name", text: $inputName, prompt: Text("e.g. Hermes WebUI"))
+                    TextField("Name", text: $inputName, prompt: Text("e.g. Hermes WebUI"))
                     TextField("URL", text: $inputURL, prompt: Text("http://127.0.0.1:8787"))
-                        .font(.system(.body, design: .monospaced))
+                        .font(.system(.callout, design: .monospaced))
                         .onSubmit { saveAndClose() }
                 }
 
                 let presets = loadPresets()
                 if !presets.isEmpty {
-                    Section("Recent") {
+                    Section("History") {
                         ForEach(presets, id: \.url) { entry in
                             Button {
                                 inputURL = entry.url
                                 inputName = entry.name
                                 saveAndClose()
                             } label: {
-                                HStack {
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(entry.name.isEmpty ? entry.url : entry.name)
-                                            .foregroundStyle(.primary)
-                                        Text(entry.url)
-                                            .font(.caption)
-                                            .foregroundStyle(.tertiary)
-                                            .lineLimit(1)
-                                            .truncationMode(.middle)
-                                    }
-                                    Spacer()
-                                    Image(systemName: "chevron.right")
-                                        .font(.caption2)
-                                        .foregroundStyle(.quaternary)
-                                }
+                                presetRow(entry)
                             }
                             .buttonStyle(.plain)
                         }
@@ -57,9 +43,9 @@ struct URLInputSheet: View {
             }
             .formStyle(.grouped)
             .scrollContentBackground(.hidden)
-            .frame(width: 420, height: presetsHeight)
+            .frame(width: 400, height: presetsHeight)
 
-            // Bottom buttons
+            // Buttons
             HStack {
                 Button("Cancel") { isPresented = false }
                     .keyboardShortcut(.cancelAction)
@@ -68,9 +54,10 @@ struct URLInputSheet: View {
                     .keyboardShortcut(.defaultAction)
                     .disabled(inputURL.trimmingCharacters(in: .whitespaces).isEmpty)
             }
-            .padding(20)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
         }
-        .frame(width: 420)
+        .frame(width: 400)
         .onAppear {
             inputURL = savedURL
             inputName = savedName
@@ -78,47 +65,82 @@ struct URLInputSheet: View {
         }
     }
 
-    // MARK: - Icon Section
+    // MARK: - Icon
 
     private var iconSection: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 6) {
             if let icon = loadIcon() {
                 Image(nsImage: icon)
                     .resizable()
-                    .frame(width: 56, height: 56)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .frame(width: 48, height: 48)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             } else {
                 Image(systemName: "globe")
-                    .font(.system(size: 40, weight: .light))
-                    .foregroundStyle(.tertiary)
+                    .font(.system(size: 36, weight: .ultraLight))
+                    .foregroundStyle(.quaternary)
             }
 
-            HStack(spacing: 12) {
-                Button(iconPath.isEmpty ? "Set Icon…" : "Change…") { pickIcon() }
+            HStack(spacing: 10) {
+                Button(iconPath.isEmpty ? "Choose Icon…" : "Change…") { pickIcon() }
                     .buttonStyle(.plain)
-                    .font(.caption)
+                    .font(.callout)
                     .foregroundStyle(.secondary)
 
                 if !iconPath.isEmpty {
+                    Text("·")
+                        .foregroundStyle(.quaternary)
                     Button("Remove") {
                         iconPath = ""
                         UserDefaults.standard.removeObject(forKey: "customIconPath")
                         setAppIcon(nil)
                     }
                     .buttonStyle(.plain)
-                    .font(.caption)
-                    .foregroundStyle(.red)
+                    .font(.callout)
+                    .foregroundStyle(.red.opacity(0.8))
                 }
             }
+            .padding(.top, 2)
         }
+    }
+
+    // MARK: - Preset Row
+
+    private func presetRow(_ entry: URLEntry) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "clock")
+                .font(.system(size: 11))
+                .foregroundStyle(.quaternary)
+                .frame(width: 16)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(entry.name.isEmpty ? entry.url : entry.name)
+                    .font(.callout)
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                if !entry.name.isEmpty {
+                    Text(entry.url)
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+            }
+
+            Spacer()
+
+            Image(systemName: "arrow.forward")
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(.quaternary)
+        }
+        .padding(.vertical, 1)
     }
 
     // MARK: - Helpers
 
     private var presetsHeight: CGFloat {
         let count = loadPresets().count
-        if count == 0 { return 130 }
-        return CGFloat(130 + min(count, 5) * 44)
+        if count == 0 { return 120 }
+        return CGFloat(120 + min(count, 5) * 40)
     }
 
     private func saveAndClose() {
