@@ -129,16 +129,29 @@ struct URLInputSheet: View {
 
     private var iconSection: some View {
         VStack(spacing: 6) {
-            if let icon = loadIcon() {
-                Image(nsImage: icon)
-                    .resizable()
-                    .frame(width: 48, height: 48)
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            } else {
-                Image(systemName: "globe")
-                    .font(.system(size: 36, weight: .ultraLight))
-                    .foregroundStyle(.quaternary)
+            Group {
+                if let icon = loadIcon() {
+                    Image(nsImage: icon)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                } else {
+                    Image(systemName: "arrow.down.app.dashed")
+                        .font(.system(size: 36, weight: .ultraLight))
+                        .foregroundStyle(.quaternary)
+                }
             }
+            .frame(width: 50, height: 50)
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .contentShape(Rectangle())
+            .onTapGesture { pickIcon() }
+            .onDrop(of: [.fileURL], isTargeted: nil) { providers in
+                handleDrop(providers)
+            }
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                    .foregroundStyle(iconPath.isEmpty ? Color.gray.opacity(0.2) : Color.clear)
+            )
 
             HStack(spacing: 10) {
                 Button(iconPath.isEmpty ? "Choose Icon…" : "Change…") { pickIcon() }
@@ -337,10 +350,28 @@ struct URLInputSheet: View {
         panel.message = "Choose an image for the app icon"
 
         if panel.runModal() == .OK, let url = panel.url {
-            iconPath = url.path
-            if let img = NSImage(contentsOf: url) {
-                setAppIcon(img)
+            applyIcon(url.path)
+        }
+    }
+
+    private func handleDrop(_ providers: [NSItemProvider]) -> Bool {
+        guard let provider = providers.first else { return false }
+        provider.loadItem(forTypeIdentifier: "public.file-url", options: nil) { item, _ in
+            guard let data = item as? Data,
+                  let url = URL(dataRepresentation: data, relativeTo: nil) else { return }
+            let ext = url.pathExtension.lowercased()
+            guard ["png", "jpg", "jpeg", "icns", "tiff"].contains(ext) else { return }
+            DispatchQueue.main.async {
+                applyIcon(url.path)
             }
+        }
+        return true
+    }
+
+    private func applyIcon(_ path: String) {
+        iconPath = path
+        if let img = NSImage(contentsOfFile: path) {
+            setAppIcon(img)
         }
     }
 
