@@ -225,7 +225,7 @@ struct URLInputSheet: View {
                     .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
-            .offset(x: -16, y: 0)
+            .offset(x: -16, y: -1)
 
             Button {
                 pendingDelete = entry
