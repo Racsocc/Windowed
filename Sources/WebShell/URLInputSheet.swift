@@ -7,13 +7,9 @@ struct URLInputSheet: View {
     @Binding var isPresented: Bool
     @State private var inputURL: String = ""
     @State private var inputName: String = ""
+    @State private var inputStartCommand: String = ""
     @State private var iconPath: String = ""
     @State private var presetsVersion: Int = 0
-    @AppStorage("autoStartWebUI") private var autoStartWebUI: Bool = false
-
-    private var isWebUILike: Bool {
-        WebUIStarter.isLocalWebUI(inputURL)
-    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -31,17 +27,18 @@ struct URLInputSheet: View {
                         .onSubmit { saveAndClose() }
                 }
 
-                if isWebUILike {
-                    Section {
-                        Toggle(isOn: $autoStartWebUI) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Auto-start WebUI service")
-                                Text("Runs ctl.sh start before loading the page")
-                                    .font(.caption)
-                                    .foregroundStyle(.tertiary)
-                            }
-                        }
+                Section {
+                    HStack {
+                        TextField("Start command", text: $inputStartCommand,
+                                  prompt: Text("~/hermes-webui/ctl.sh start"))
+                            .font(.system(.callout, design: .monospaced))
+                        Button("Browse…") { pickScript() }
+                            .controlSize(.small)
                     }
+                } header: {
+                    Text("Auto-start")
+                } footer: {
+                    Text("Shell command to run before loading the page. Leave empty to skip.")
                 }
 
                 let presets = loadPresets()
@@ -52,6 +49,7 @@ struct URLInputSheet: View {
                             Button {
                                 inputURL = entry.url
                                 inputName = entry.name
+                                inputStartCommand = entry.startCommand ?? ""
                                 saveAndClose()
                             } label: {
                                 presetRow(entry)
@@ -89,6 +87,10 @@ struct URLInputSheet: View {
             inputURL = savedURL
             inputName = savedName
             iconPath = UserDefaults.standard.string(forKey: "customIconPath") ?? ""
+            // Load start command from current preset.
+            if let entry = loadPresets().first(where: { $0.url == savedURL }) {
+                inputStartCommand = entry.startCommand ?? ""
+            }
         }
     }
 
@@ -151,6 +153,13 @@ struct URLInputSheet: View {
                         .lineLimit(1)
                         .truncationMode(.middle)
                 }
+                if let cmd = entry.startCommand, !cmd.isEmpty {
+                    Text(cmd)
+                        .font(.caption2)
+                        .foregroundStyle(.quaternary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
             }
 
             Spacer()
@@ -166,17 +175,18 @@ struct URLInputSheet: View {
 
     private var presetsHeight: CGFloat {
         let count = loadPresets().count
-        if count == 0 { return 180 }
-        return CGFloat(200 + min(count, 5) * 48)
+        if count == 0 { return 260 }
+        return CGFloat(280 + min(count, 5) * 56)
     }
 
     private func saveAndClose() {
         let url = inputURL.trimmingCharacters(in: .whitespaces)
         let name = inputName.trimmingCharacters(in: .whitespaces)
+        let cmd = inputStartCommand.trimmingCharacters(in: .whitespaces)
         guard !url.isEmpty else { return }
         savedURL = url
         savedName = name
-        savePreset(url: url, name: name)
+        savePreset(url: url, name: name, startCommand: cmd)
         isPresented = false
     }
 
@@ -189,21 +199,37 @@ struct URLInputSheet: View {
     }
 
     private func deletePreset(url: String) {
-        var list = loadPresets().filter { $0.url != url }
+        let list = loadPresets().filter { $0.url != url }
         if let data = try? JSONEncoder().encode(list) {
             UserDefaults.standard.set(data, forKey: "urlPresets")
         }
         presetsVersion += 1
     }
 
-    private func savePreset(url: String, name: String) {
+    private func savePreset(url: String, name: String, startCommand: String?) {
         var list = loadPresets().filter { $0.url != url }
-        list.insert(URLEntry(url: url, name: name), at: 0)
+        list.insert(URLEntry(url: url, name: name, startCommand: startCommand), at: 0)
         if list.count > 5 { list = Array(list.prefix(5)) }
         if let data = try? JSONEncoder().encode(list) {
             UserDefaults.standard.set(data, forKey: "urlPresets")
         }
     }
+
+    // MARK: - Browse Script
+
+    private func pickScript() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.unixExecutable, .shellScript, .data]
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        panel.message = "Choose a startup script"
+
+        if panel.runModal() == .OK, let url = panel.url {
+            inputStartCommand = url.path
+        }
+    }
+
+    // MARK: - Icon
 
     private func pickIcon() {
         let panel = NSOpenPanel()
@@ -240,4 +266,5 @@ struct URLInputSheet: View {
 struct URLEntry: Codable, Hashable {
     let url: String
     let name: String
+    var startCommand: String?
 }
