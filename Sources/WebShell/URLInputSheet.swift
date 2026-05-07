@@ -211,7 +211,7 @@ struct URLInputSheet: View {
                     .padding(.bottom, 3)
             }
             .buttonStyle(.plain)
-            .offset(x: -16, y: 1)
+            .offset(x: -21, y: 1)
 
             Button {
                 // Load preset into fields for editing.
