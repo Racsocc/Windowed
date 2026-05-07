@@ -28,17 +28,27 @@ struct URLInputSheet: View {
                 }
 
                 Section {
-                    HStack {
-                        TextField("Start command", text: $inputStartCommand,
-                                  prompt: Text("~/hermes-webui/ctl.sh start"))
-                            .font(.system(.callout, design: .monospaced))
+                    HStack(alignment: .top) {
+                        ZStack(alignment: .topLeading) {
+                            if inputStartCommand.isEmpty {
+                                Text("~/hermes-webui/ctl.sh start")
+                                    .font(.system(.callout, design: .monospaced))
+                                    .foregroundStyle(.quaternary)
+                                    .padding(.top, 4)
+                                    .padding(.leading, 4)
+                            }
+                            TextEditor(text: $inputStartCommand)
+                                .font(.system(.callout, design: .monospaced))
+                                .frame(minHeight: 44, maxHeight: 88)
+                                .scrollContentBackground(.hidden)
+                        }
                         Button("Browse…") { pickScript() }
                             .controlSize(.small)
                     }
                 } header: {
                     Text("Auto-start")
                 } footer: {
-                    Text("Shell command to run before loading. Add the appropriate argument for your script (e.g. start, run, up, serve). If none needed, just the path.")
+                    Text("Type a command directly or browse to select a script. Add the appropriate argument for your script (e.g. start, run, up, serve). If none needed, just the path.")
                 }
 
                 let presets = loadPresets()
