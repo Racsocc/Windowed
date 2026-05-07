@@ -58,11 +58,12 @@ struct URLInputSheet: View {
                     Section("History") {
                         ForEach(presets, id: \.url) { entry in
                             Button {
-                                // Load preset into fields for editing.
+                                // Click row → open directly.
                                 inputURL = entry.url
                                 inputName = entry.name
                                 inputStartCommand = entry.startCommand ?? ""
                                 iconPath = entry.iconPath ?? ""
+                                saveAndClose()
                             } label: {
                                 presetRow(entry)
                             }
@@ -189,14 +190,24 @@ struct URLInputSheet: View {
             Spacer()
 
             Button {
+                togglePin(entry)
+            } label: {
+                Image(systemName: "arrow.up.to.line.compact")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(entry.isPinned ? Color.blue : Color.gray.opacity(0.4))
+            }
+            .buttonStyle(.plain)
+            .offset(x: -16)
+
+            Button {
                 // Load preset into fields for editing.
                 inputURL = entry.url
                 inputName = entry.name
                 inputStartCommand = entry.startCommand ?? ""
                 iconPath = entry.iconPath ?? ""
             } label: {
-                Image(systemName: "pencil")
-                    .font(.system(size: 11, weight: .medium))
+                Image(systemName: "square.and.pencil")
+                    .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
@@ -247,24 +258,38 @@ struct URLInputSheet: View {
               let list = try? JSONDecoder().decode([URLEntry].self, from: data) else {
             return []
         }
-        return list
+        return list.sorted { $0.isPinned && !$1.isPinned }
     }
 
     private func deletePreset(url: String) {
         let list = loadPresets().filter { $0.url != url }
-        if let data = try? JSONEncoder().encode(list) {
-            UserDefaults.standard.set(data, forKey: "urlPresets")
-        }
+        savePresetsList(list)
         presetsVersion += 1
     }
 
-    private func savePreset(url: String, name: String, startCommand: String?, iconPath: String? = nil) {
-        var list = loadPresets().filter { $0.url != url }
-        list.insert(URLEntry(url: url, name: name, startCommand: startCommand, iconPath: iconPath), at: 0)
-        if list.count > 5 { list = Array(list.prefix(5)) }
+    private func togglePin(_ entry: URLEntry) {
+        var list = loadPresets().filter { $0.url != entry.url }
+        var updated = entry
+        updated.pinned = !entry.isPinned
+        list.insert(updated, at: updated.isPinned ? 0 : list.count)
+        savePresetsList(list)
+        presetsVersion += 1
+    }
+
+    private func savePresetsList(_ list: [URLEntry]) {
         if let data = try? JSONEncoder().encode(list) {
             UserDefaults.standard.set(data, forKey: "urlPresets")
         }
+    }
+
+    private func savePreset(url: String, name: String, startCommand: String?, iconPath: String? = nil) {
+        let existing = loadPresets().first(where: { $0.url == url })
+        var list = loadPresets().filter { $0.url != url }
+        var entry = URLEntry(url: url, name: name, startCommand: startCommand, iconPath: iconPath)
+        entry.pinned = existing?.isPinned ?? false
+        list.insert(entry, at: entry.isPinned ? 0 : list.count)
+        if list.count > 5 { list = Array(list.prefix(5)) }
+        savePresetsList(list)
     }
 
     // MARK: - Browse Script
@@ -313,4 +338,7 @@ struct URLEntry: Codable, Hashable {
     let name: String
     var startCommand: String?
     var iconPath: String?
+    var pinned: Bool?
+
+    var isPinned: Bool { pinned == true }
 }
