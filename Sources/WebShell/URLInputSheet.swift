@@ -221,11 +221,11 @@ struct URLInputSheet: View {
                 iconPath = entry.iconPath ?? ""
             } label: {
                 Image(systemName: "square.and.pencil")
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
-            .offset(x: -16, y: -1)
+            .offset(x: -16, y: 0)
 
             Button {
                 pendingDelete = entry
