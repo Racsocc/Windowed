@@ -11,6 +11,14 @@ struct URLInputSheet: View {
     @State private var iconPath: String = ""
     @State private var presetsVersion: Int = 0
     @State private var pendingDelete: URLEntry? = nil
+    @State private var showDiscardAlert: Bool = false
+
+    private var hasChanges: Bool {
+        !inputURL.trimmingCharacters(in: .whitespaces).isEmpty
+        || !inputName.trimmingCharacters(in: .whitespaces).isEmpty
+        || !inputStartCommand.trimmingCharacters(in: .whitespaces).isEmpty
+        || !iconPath.isEmpty
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -93,8 +101,14 @@ struct URLInputSheet: View {
 
             // Buttons
             HStack {
-                Button("Cancel") { isPresented = false }
-                    .keyboardShortcut(.cancelAction)
+                Button("Cancel") {
+                    if hasChanges {
+                        showDiscardAlert = true
+                    } else {
+                        isPresented = false
+                    }
+                }
+                .keyboardShortcut(.cancelAction)
                 Spacer()
                 Button("Open") { saveAndClose() }
                     .keyboardShortcut(.defaultAction)
@@ -104,6 +118,13 @@ struct URLInputSheet: View {
             .padding(.vertical, 16)
         }
         .frame(width: 550)
+        .interactiveDismissDisabled(hasChanges)
+        .alert("Discard changes?", isPresented: $showDiscardAlert) {
+            Button("Discard", role: .destructive) { isPresented = false }
+            Button("Keep editing", role: .cancel) { }
+        } message: {
+            Text("You have unsaved changes.")
+        }
         .onAppear {
             // Start blank — ready to add a new entry.
             inputURL = ""
