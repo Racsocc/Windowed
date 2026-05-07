@@ -205,13 +205,13 @@ struct URLInputSheet: View {
                 togglePin(entry)
             } label: {
                 Image(systemName: "arrow.up.to.line.compact")
-                    .font(.system(size: 15, weight: .medium))
+                    .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(entry.isPinned ? Color.blue : Color.gray.opacity(0.4))
                     .padding(.top, 1)
                     .padding(.bottom, 3)
             }
             .buttonStyle(.plain)
-            .offset(x: -16)
+            .offset(x: -16, y: 1)
 
             Button {
                 // Load preset into fields for editing.
