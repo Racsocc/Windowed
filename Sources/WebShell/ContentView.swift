@@ -7,7 +7,9 @@ struct ContentView: View {
     @StateObject private var serviceStarter = ServiceStarter()
     @State private var currentURL: String = ""
     @State private var serviceReady: Bool = false
-    @State private var reloadToken: UUID = UUID()  // forces WebView recreation
+    @State private var reloadToken: UUID = UUID()
+    @State private var settingsHasChanges: Bool = false
+    @State private var showDiscardAlert: Bool = false
 
     private var startCommand: String? {
         guard let data = UserDefaults.standard.data(forKey: "urlPresets"),
@@ -24,17 +26,40 @@ struct ContentView: View {
     }
 
     var body: some View {
-        Group {
-            if currentURL.isEmpty {
-                emptyState
-            } else if hasStartCommand && !serviceReady {
-                loadingState
-            } else {
-                WebView(urlString: currentURL)
-                    .id(reloadToken)
+        ZStack {
+            // Main content
+            Group {
+                if currentURL.isEmpty {
+                    emptyState
+                } else if hasStartCommand && !serviceReady {
+                    loadingState
+                } else {
+                    WebView(urlString: currentURL)
+                        .id(reloadToken)
+                        .ignoresSafeArea()
+                }
+            }
+
+            // Settings overlay
+            if showURLSheet {
+                // Background overlay — captures taps
+                Color.black.opacity(0.3)
                     .ignoresSafeArea()
+                    .onTapGesture {
+                        handleBackgroundTap()
+                    }
+
+                // Settings panel
+                URLInputSheet(
+                    savedURL: $savedURL,
+                    savedName: $savedName,
+                    isPresented: $showURLSheet,
+                    hasChanges: $settingsHasChanges
+                )
+                .transition(.scale.combined(with: .opacity))
             }
         }
+        .animation(.easeInOut(duration: 0.2), value: showURLSheet)
         .navigationTitle(displayTitle)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -56,6 +81,15 @@ struct ContentView: View {
             }
         }
         .frame(minWidth: 800, minHeight: 500)
+        .alert("Discard changes?", isPresented: $showDiscardAlert) {
+            Button("Discard", role: .destructive) {
+                showURLSheet = false
+                settingsHasChanges = false
+            }
+            Button("Keep editing", role: .cancel) { }
+        } message: {
+            Text("You have unsaved changes.")
+        }
         .onAppear {
             if !savedURL.isEmpty {
                 currentURL = savedURL
@@ -72,7 +106,17 @@ struct ContentView: View {
         }
     }
 
-    // MARK: - Loading State (service starting)
+    // MARK: - Background Tap
+
+    private func handleBackgroundTap() {
+        if settingsHasChanges {
+            showDiscardAlert = true
+        } else {
+            showURLSheet = false
+        }
+    }
+
+    // MARK: - Loading State
 
     private var loadingState: some View {
         VStack(spacing: 16) {
@@ -132,12 +176,10 @@ struct ContentView: View {
 
     private func performRefresh() {
         if hasStartCommand, let cmd = startCommand {
-            // Re-run service, then reload page.
             serviceReady = false
             serviceStarter.reset()
             serviceStarter.start(command: cmd, healthURL: currentURL)
         } else {
-            // Just reload the WebView.
             reloadToken = UUID()
         }
     }

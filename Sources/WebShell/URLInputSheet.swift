@@ -5,6 +5,7 @@ struct URLInputSheet: View {
     @Binding var savedURL: String
     @Binding var savedName: String
     @Binding var isPresented: Bool
+    @Binding var hasChanges: Bool
     @State private var inputURL: String = ""
     @State private var inputName: String = ""
     @State private var inputStartCommand: String = ""
@@ -12,13 +13,6 @@ struct URLInputSheet: View {
     @State private var presetsVersion: Int = 0
     @State private var pendingDelete: URLEntry? = nil
     @State private var showDiscardAlert: Bool = false
-
-    private var hasChanges: Bool {
-        !inputURL.trimmingCharacters(in: .whitespaces).isEmpty
-        || !inputName.trimmingCharacters(in: .whitespaces).isEmpty
-        || !inputStartCommand.trimmingCharacters(in: .whitespaces).isEmpty
-        || !iconPath.isEmpty
-    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -102,11 +96,7 @@ struct URLInputSheet: View {
             // Buttons
             HStack {
                 Button("Cancel") {
-                    if hasChanges {
-                        showDiscardAlert = true
-                    } else {
-                        isPresented = false
-                    }
+                    isPresented = false
                 }
                 .keyboardShortcut(.cancelAction)
                 Spacer()
@@ -118,20 +108,21 @@ struct URLInputSheet: View {
             .padding(.vertical, 16)
         }
         .frame(width: 550)
-        .interactiveDismissDisabled(hasChanges)
-        .alert("Discard changes?", isPresented: $showDiscardAlert) {
-            Button("Discard", role: .destructive) { isPresented = false }
-            Button("Keep editing", role: .cancel) { }
-        } message: {
-            Text("You have unsaved changes.")
-        }
+        .background(Color(nsColor: .windowBackgroundColor))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .shadow(color: .black.opacity(0.2), radius: 20, y: 10)
         .onAppear {
             // Start blank — ready to add a new entry.
             inputURL = ""
             inputName = ""
             inputStartCommand = ""
             iconPath = ""
+            hasChanges = false
         }
+        .onChange(of: inputURL) { _, _ in updateHasChanges() }
+        .onChange(of: inputName) { _, _ in updateHasChanges() }
+        .onChange(of: inputStartCommand) { _, _ in updateHasChanges() }
+        .onChange(of: iconPath) { _, _ in updateHasChanges() }
     }
 
     // MARK: - Icon
@@ -274,6 +265,13 @@ struct URLInputSheet: View {
             NSApplication.shared.applicationIconImage = nil
         }
         isPresented = false
+    }
+
+    private func updateHasChanges() {
+        hasChanges = !inputURL.trimmingCharacters(in: .whitespaces).isEmpty
+            || !inputName.trimmingCharacters(in: .whitespaces).isEmpty
+            || !inputStartCommand.trimmingCharacters(in: .whitespaces).isEmpty
+            || !iconPath.isEmpty
     }
 
     private func loadPresets() -> [URLEntry] {

@@ -26,9 +26,6 @@ struct WindowedApp: App {
                         showURLSheet = true
                     }
                 }
-                .sheet(isPresented: $showURLSheet) {
-                    URLInputSheet(savedURL: $savedURL, savedName: $savedName, isPresented: $showURLSheet)
-                }
         }
         .windowStyle(.automatic)
         .commands {
