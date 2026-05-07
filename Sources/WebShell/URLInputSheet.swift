@@ -10,6 +10,7 @@ struct URLInputSheet: View {
     @State private var inputStartCommand: String = ""
     @State private var iconPath: String = ""
     @State private var presetsVersion: Int = 0
+    @State private var pendingDelete: URLEntry? = nil
 
     var body: some View {
         VStack(spacing: 0) {
@@ -65,20 +66,28 @@ struct URLInputSheet: View {
                                 presetRow(entry)
                             }
                             .buttonStyle(.plain)
-                            .contextMenu {
-                                Button(role: .destructive) {
-                                    deletePreset(url: entry.url)
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
-                                }
-                            }
                         }
                     }
                 }
             }
             .formStyle(.grouped)
             .scrollContentBackground(.hidden)
-            .frame(width: 400, height: presetsHeight)
+            .frame(width: 550, height: presetsHeight)
+            .alert("Delete this entry?", isPresented: Binding(
+                get: { pendingDelete != nil },
+                set: { if !$0 { pendingDelete = nil } }
+            )) {
+                Button("Cancel", role: .cancel) { pendingDelete = nil }
+                Button("Delete", role: .destructive) {
+                    if let entry = pendingDelete {
+                        deletePreset(url: entry.url)
+                        pendingDelete = nil
+                    }
+                }
+                if let entry = pendingDelete {
+                    Text(entry.name.isEmpty ? entry.url : entry.name)
+                }
+            }
 
             // Buttons
             HStack {
@@ -92,7 +101,7 @@ struct URLInputSheet: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 16)
         }
-        .frame(width: 400)
+        .frame(width: 550)
         .onAppear {
             inputURL = savedURL
             inputName = savedName
@@ -174,11 +183,17 @@ struct URLInputSheet: View {
 
             Spacer()
 
-            Image(systemName: "arrow.forward")
-                .font(.system(size: 9, weight: .medium))
-                .foregroundStyle(.quaternary)
+            Button {
+                pendingDelete = entry
+            } label: {
+                Image(systemName: "trash")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.red.opacity(0.6))
+            }
+            .buttonStyle(.plain)
         }
         .padding(.vertical, 1)
+        .contentShape(Rectangle())
     }
 
     // MARK: - Helpers
