@@ -58,11 +58,11 @@ struct URLInputSheet: View {
                     Section("History") {
                         ForEach(presets, id: \.url) { entry in
                             Button {
+                                // Load preset into fields for editing.
                                 inputURL = entry.url
                                 inputName = entry.name
                                 inputStartCommand = entry.startCommand ?? ""
                                 iconPath = entry.iconPath ?? ""
-                                saveAndClose()
                             } label: {
                                 presetRow(entry)
                             }
@@ -104,15 +104,11 @@ struct URLInputSheet: View {
         }
         .frame(width: 550)
         .onAppear {
-            inputURL = savedURL
-            inputName = savedName
-            // Load icon + start command from current preset.
-            if let entry = loadPresets().first(where: { $0.url == savedURL }) {
-                inputStartCommand = entry.startCommand ?? ""
-                iconPath = entry.iconPath ?? ""
-            } else {
-                iconPath = ""
-            }
+            // Start blank — ready to add a new entry.
+            inputURL = ""
+            inputName = ""
+            inputStartCommand = ""
+            iconPath = ""
         }
     }
 
@@ -160,8 +156,8 @@ struct URLInputSheet: View {
             if let path = entry.iconPath, !path.isEmpty, let img = NSImage(contentsOfFile: path) {
                 Image(nsImage: img)
                     .resizable()
-                    .frame(width: 20, height: 20)
-                    .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+                    .frame(width: 32, height: 32)
+                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
             } else {
                 Image(systemName: "clock")
                     .font(.system(size: 11))
@@ -191,6 +187,20 @@ struct URLInputSheet: View {
             }
 
             Spacer()
+
+            Button {
+                // Load preset into fields for editing.
+                inputURL = entry.url
+                inputName = entry.name
+                inputStartCommand = entry.startCommand ?? ""
+                iconPath = entry.iconPath ?? ""
+            } label: {
+                Image(systemName: "pencil")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .offset(x: -16)
 
             Button {
                 pendingDelete = entry
