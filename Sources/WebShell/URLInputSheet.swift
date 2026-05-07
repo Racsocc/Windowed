@@ -157,10 +157,17 @@ struct URLInputSheet: View {
 
     private func presetRow(_ entry: URLEntry) -> some View {
         HStack(spacing: 10) {
-            Image(systemName: "clock")
-                .font(.system(size: 11))
-                .foregroundStyle(.quaternary)
-                .frame(width: 16)
+            if let path = entry.iconPath, !path.isEmpty, let img = NSImage(contentsOfFile: path) {
+                Image(nsImage: img)
+                    .resizable()
+                    .frame(width: 20, height: 20)
+                    .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+            } else {
+                Image(systemName: "clock")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.quaternary)
+                    .frame(width: 16)
+            }
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(entry.name.isEmpty ? entry.url : entry.name)
