@@ -38,7 +38,7 @@ struct URLInputSheet: View {
                 } header: {
                     Text("Auto-start")
                 } footer: {
-                    Text("Shell command to run before loading the page. Leave empty to skip.")
+                    Text("Shell command to run before loading. Add the appropriate argument for your script (e.g. start, run, up, serve). If none needed, just the path.")
                 }
 
                 let presets = loadPresets()
