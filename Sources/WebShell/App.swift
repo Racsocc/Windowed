@@ -8,8 +8,12 @@ struct WindowedApp: App {
     @State private var showURLSheet: Bool = false
 
     init() {
-        if let path = UserDefaults.standard.string(forKey: "customIconPath"),
-           !path.isEmpty, let img = NSImage(contentsOfFile: path) {
+        // Load icon from the active preset on launch.
+        if let data = UserDefaults.standard.data(forKey: "urlPresets"),
+           let list = try? JSONDecoder().decode([URLEntry].self, from: data),
+           let entry = list.first(where: { $0.url == savedURL }),
+           let path = entry.iconPath, !path.isEmpty,
+           let img = NSImage(contentsOfFile: path) {
             NSApplication.shared.applicationIconImage = img
         }
     }

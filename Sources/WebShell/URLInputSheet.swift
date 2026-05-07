@@ -61,6 +61,7 @@ struct URLInputSheet: View {
                                 inputURL = entry.url
                                 inputName = entry.name
                                 inputStartCommand = entry.startCommand ?? ""
+                                iconPath = entry.iconPath ?? ""
                                 saveAndClose()
                             } label: {
                                 presetRow(entry)
@@ -105,10 +106,12 @@ struct URLInputSheet: View {
         .onAppear {
             inputURL = savedURL
             inputName = savedName
-            iconPath = UserDefaults.standard.string(forKey: "customIconPath") ?? ""
-            // Load start command from current preset.
+            // Load icon + start command from current preset.
             if let entry = loadPresets().first(where: { $0.url == savedURL }) {
                 inputStartCommand = entry.startCommand ?? ""
+                iconPath = entry.iconPath ?? ""
+            } else {
+                iconPath = ""
             }
         }
     }
@@ -139,7 +142,6 @@ struct URLInputSheet: View {
                         .foregroundStyle(.quaternary)
                     Button("Remove") {
                         iconPath = ""
-                        UserDefaults.standard.removeObject(forKey: "customIconPath")
                         setAppIcon(nil)
                     }
                     .buttonStyle(.plain)
@@ -191,6 +193,7 @@ struct URLInputSheet: View {
                     .foregroundStyle(.red.opacity(0.6))
             }
             .buttonStyle(.plain)
+            .offset(x: -10)
         }
         .padding(.vertical, 1)
         .contentShape(Rectangle())
@@ -208,10 +211,17 @@ struct URLInputSheet: View {
         let url = inputURL.trimmingCharacters(in: .whitespaces)
         let name = inputName.trimmingCharacters(in: .whitespaces)
         let cmd = inputStartCommand.trimmingCharacters(in: .whitespaces)
+        let icon = iconPath.trimmingCharacters(in: .whitespaces)
         guard !url.isEmpty else { return }
         savedURL = url
         savedName = name
-        savePreset(url: url, name: name, startCommand: cmd)
+        savePreset(url: url, name: name, startCommand: cmd, iconPath: icon)
+        // Apply the preset's icon to the app.
+        if !icon.isEmpty, let img = NSImage(contentsOfFile: icon) {
+            NSApplication.shared.applicationIconImage = img
+        } else {
+            NSApplication.shared.applicationIconImage = nil
+        }
         isPresented = false
     }
 
@@ -231,9 +241,9 @@ struct URLInputSheet: View {
         presetsVersion += 1
     }
 
-    private func savePreset(url: String, name: String, startCommand: String?) {
+    private func savePreset(url: String, name: String, startCommand: String?, iconPath: String? = nil) {
         var list = loadPresets().filter { $0.url != url }
-        list.insert(URLEntry(url: url, name: name, startCommand: startCommand), at: 0)
+        list.insert(URLEntry(url: url, name: name, startCommand: startCommand, iconPath: iconPath), at: 0)
         if list.count > 5 { list = Array(list.prefix(5)) }
         if let data = try? JSONEncoder().encode(list) {
             UserDefaults.standard.set(data, forKey: "urlPresets")
@@ -264,22 +274,15 @@ struct URLInputSheet: View {
         panel.message = "Choose an image for the app icon"
 
         if panel.runModal() == .OK, let url = panel.url {
-            let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-            let dir = support.appendingPathComponent("WebShell")
-            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-            let dest = dir.appendingPathComponent("icon\(url.pathExtension)")
-            try? FileManager.default.removeItem(at: dest)
-            try? FileManager.default.copyItem(at: url, to: dest)
-
-            iconPath = dest.path
-            UserDefaults.standard.set(dest.path, forKey: "customIconPath")
-            setAppIcon(NSImage(contentsOf: dest))
+            iconPath = url.path
+            if let img = NSImage(contentsOf: url) {
+                setAppIcon(img)
+            }
         }
     }
 
     private func loadIcon() -> NSImage? {
-        let path = iconPath.isEmpty ? (UserDefaults.standard.string(forKey: "customIconPath") ?? "") : iconPath
-        guard !path.isEmpty, let img = NSImage(contentsOfFile: path) else { return nil }
+        guard !iconPath.isEmpty, let img = NSImage(contentsOfFile: iconPath) else { return nil }
         return img
     }
 
@@ -292,4 +295,5 @@ struct URLEntry: Codable, Hashable {
     let url: String
     let name: String
     var startCommand: String?
+    var iconPath: String?
 }
