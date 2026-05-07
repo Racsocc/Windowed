@@ -4,12 +4,17 @@ struct ContentView: View {
     @Binding var savedURL: String
     @Binding var savedName: String
     @Binding var showURLSheet: Bool
+    @AppStorage("autoStartWebUI") private var autoStartWebUI: Bool = false
+    @StateObject private var webuiStarter = WebUIStarter()
     @State private var currentURL: String = ""
+    @State private var webuiReady: Bool = false  // tracks whether we've finished the start attempt
 
     var body: some View {
         Group {
             if currentURL.isEmpty {
                 emptyState
+            } else if shouldWaitForWebUI && !webuiReady {
+                loadingState
             } else {
                 WebView(urlString: currentURL)
                     .ignoresSafeArea()
@@ -39,13 +44,78 @@ struct ContentView: View {
         .onAppear {
             if !savedURL.isEmpty {
                 currentURL = savedURL
+                tryStartWebUIIfNeeded()
             }
         }
         .onChange(of: savedURL) { _, newValue in
             if !newValue.isEmpty {
                 currentURL = newValue
+                webuiReady = false
+                tryStartWebUIIfNeeded()
             }
         }
+    }
+
+    // MARK: - Loading State (WebUI starting)
+
+    private var shouldWaitForWebUI: Bool {
+        autoStartWebUI && WebUIStarter.isLocalWebUI(currentURL)
+    }
+
+    private var loadingState: some View {
+        VStack(spacing: 16) {
+            switch webuiStarter.status {
+            case .idle, .starting:
+                ProgressView()
+                    .progressViewStyle(.circular)
+                    .scaleEffect(1.2)
+                Text("Starting WebUI service…")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+
+            case .ready:
+                // Brief flash — onAppear will flip webuiReady almost immediately.
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 36))
+                    .foregroundStyle(.green)
+                Text("Ready")
+                    .foregroundStyle(.secondary)
+
+            case .failed(let msg):
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 36))
+                    .foregroundStyle(.orange)
+                Text("WebUI failed to start")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                Text(msg)
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 320)
+                Button("Load anyway") {
+                    webuiReady = true
+                }
+                .buttonStyle(.bordered)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onReceive(webuiStarter.$status) { newStatus in
+            if newStatus == .ready {
+                // Small delay so the UI can show the checkmark briefly.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    webuiReady = true
+                }
+            }
+        }
+    }
+
+    private func tryStartWebUIIfNeeded() {
+        guard shouldWaitForWebUI else {
+            webuiReady = true
+            return
+        }
+        webuiStarter.startIfNeeded()
     }
 
     // MARK: - Empty State

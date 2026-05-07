@@ -9,6 +9,11 @@ struct URLInputSheet: View {
     @State private var inputName: String = ""
     @State private var iconPath: String = ""
     @State private var presetsVersion: Int = 0
+    @AppStorage("autoStartWebUI") private var autoStartWebUI: Bool = false
+
+    private var isWebUILike: Bool {
+        WebUIStarter.isLocalWebUI(inputURL)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -24,6 +29,19 @@ struct URLInputSheet: View {
                     TextField("URL", text: $inputURL, prompt: Text("http://127.0.0.1:8787"))
                         .font(.system(.callout, design: .monospaced))
                         .onSubmit { saveAndClose() }
+                }
+
+                if isWebUILike {
+                    Section {
+                        Toggle(isOn: $autoStartWebUI) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Auto-start WebUI service")
+                                Text("Runs ctl.sh start before loading the page")
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                            }
+                        }
+                    }
                 }
 
                 let presets = loadPresets()
