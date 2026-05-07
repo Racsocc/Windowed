@@ -140,7 +140,7 @@ struct URLInputSheet: View {
                         .foregroundStyle(.quaternary)
                 }
             }
-            .frame(width: 50, height: 50)
+            .frame(width: 48, height: 48)
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             .contentShape(Rectangle())
             .onTapGesture { pickIcon() }
