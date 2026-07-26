@@ -2,3 +2,6 @@
 .swiftpm/
 *.xcuserstate
 *.xcworkspace
+dist/
+app_backup/
+*.dmg
