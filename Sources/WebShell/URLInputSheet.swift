@@ -9,10 +9,13 @@ struct URLInputSheet: View {
     @State private var inputURL: String = ""
     @State private var inputName: String = ""
     @State private var inputStartCommand: String = ""
+    @State private var inputStopCommand: String = ""
+    @State private var stopServiceOnClose: Bool = false
     @State private var iconPath: String = ""
     @State private var presetsVersion: Int = 0
     @State private var pendingDelete: URLEntry? = nil
     @State private var showDiscardAlert: Bool = false
+    @State private var urlValidationMessage: String? = nil
 
     var body: some View {
         VStack(spacing: 0) {
@@ -28,6 +31,11 @@ struct URLInputSheet: View {
                     TextField("URL", text: $inputURL, prompt: Text("http://127.0.0.1:8787"))
                         .font(.system(.callout, design: .monospaced))
                         .onSubmit { saveAndClose() }
+                    if let urlValidationMessage {
+                        Text(urlValidationMessage)
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    }
                 }
 
                 Section {
@@ -48,10 +56,30 @@ struct URLInputSheet: View {
                         Button("Browse…") { pickScript() }
                             .controlSize(.small)
                     }
+                    Toggle("Stop service when window closes", isOn: $stopServiceOnClose)
+                    if stopServiceOnClose {
+                        HStack(alignment: .top) {
+                            ZStack(alignment: .topLeading) {
+                                if inputStopCommand.isEmpty {
+                                    Text("~/hermes-webui/ctl.sh stop")
+                                        .font(.system(.callout, design: .monospaced))
+                                        .foregroundStyle(.quaternary)
+                                        .padding(.top, 4)
+                                        .padding(.leading, 4)
+                                }
+                                TextEditor(text: $inputStopCommand)
+                                    .font(.system(.callout, design: .monospaced))
+                                    .frame(minHeight: 44, maxHeight: 88)
+                                    .scrollContentBackground(.hidden)
+                            }
+                            Button("Browse…") { pickStopScript() }
+                                .controlSize(.small)
+                        }
+                    }
                 } header: {
                     Text("Auto-start")
                 } footer: {
-                    Text("Type a command directly or browse to select a script. Add the appropriate argument for your script (e.g. start, run, up, serve). If none needed, just the path.")
+                    Text("Type a command directly or browse to select a script. Add the appropriate argument for your script (e.g. start, run, up, serve). If you enable stop-on-close, provide a matching stop command such as stop or down.")
                 }
 
                 let presets = loadPresets()
@@ -59,17 +87,7 @@ struct URLInputSheet: View {
                 if !presets.isEmpty {
                     Section("History") {
                         ForEach(presets, id: \.url) { entry in
-                            Button {
-                                // Click row → open directly.
-                                inputURL = entry.url
-                                inputName = entry.name
-                                inputStartCommand = entry.startCommand ?? ""
-                                iconPath = entry.iconPath ?? ""
-                                saveAndClose()
-                            } label: {
-                                presetRow(entry)
-                            }
-                            .buttonStyle(.plain)
+                            presetRow(entry)
                         }
                     }
                 }
@@ -116,12 +134,20 @@ struct URLInputSheet: View {
             inputURL = ""
             inputName = ""
             inputStartCommand = ""
+            inputStopCommand = ""
+            stopServiceOnClose = false
             iconPath = ""
             hasChanges = false
+            urlValidationMessage = nil
         }
-        .onChange(of: inputURL) { _, _ in updateHasChanges() }
+        .onChange(of: inputURL) { _, _ in
+            urlValidationMessage = nil
+            updateHasChanges()
+        }
         .onChange(of: inputName) { _, _ in updateHasChanges() }
         .onChange(of: inputStartCommand) { _, _ in updateHasChanges() }
+        .onChange(of: inputStopCommand) { _, _ in updateHasChanges() }
+        .onChange(of: stopServiceOnClose) { _, _ in updateHasChanges() }
         .onChange(of: iconPath) { _, _ in updateHasChanges() }
     }
 
@@ -179,40 +205,54 @@ struct URLInputSheet: View {
 
     private func presetRow(_ entry: URLEntry) -> some View {
         HStack(spacing: 10) {
-            if let path = entry.iconPath, !path.isEmpty, let img = NSImage(contentsOfFile: path) {
-                Image(nsImage: img)
-                    .resizable()
-                    .frame(width: 32, height: 32)
-                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-            } else {
-                Image(systemName: "clock")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.quaternary)
-                    .frame(width: 16)
-            }
-
-            VStack(alignment: .leading, spacing: 1) {
-                Text(entry.name.isEmpty ? entry.url : entry.name)
-                    .font(.callout)
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-                if !entry.name.isEmpty {
-                    Text(entry.url)
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                }
-                if let cmd = entry.startCommand, !cmd.isEmpty {
-                    Text(cmd)
-                        .font(.caption2)
+            HStack(spacing: 10) {
+                if let path = entry.iconPath, !path.isEmpty, let img = NSImage(contentsOfFile: path) {
+                    Image(nsImage: img)
+                        .resizable()
+                        .frame(width: 32, height: 32)
+                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                } else {
+                    Image(systemName: "clock")
+                        .font(.system(size: 11))
                         .foregroundStyle(.quaternary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
+                        .frame(width: 16)
                 }
-            }
 
-            Spacer()
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(entry.name.isEmpty ? entry.url : entry.name)
+                        .font(.callout)
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                    if !entry.name.isEmpty {
+                        Text(entry.url)
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
+                    if let cmd = entry.startCommand, !cmd.isEmpty {
+                        Text(cmd)
+                            .font(.caption2)
+                            .foregroundStyle(.quaternary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
+                    if entry.shouldStopOnClose,
+                       let stopCommand = entry.stopCommand, !stopCommand.isEmpty {
+                        Text("Stop: \(stopCommand)")
+                            .font(.caption2)
+                            .foregroundStyle(.quaternary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
+                }
+
+                Spacer()
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                openPreset(entry)
+            }
 
             Button {
                 togglePin(entry)
@@ -231,6 +271,8 @@ struct URLInputSheet: View {
                 inputURL = entry.url
                 inputName = entry.name
                 inputStartCommand = entry.startCommand ?? ""
+                inputStopCommand = entry.stopCommand ?? ""
+                stopServiceOnClose = entry.shouldStopOnClose
                 iconPath = entry.iconPath ?? ""
             } label: {
                 Image(systemName: "square.and.pencil")
@@ -266,17 +308,36 @@ struct URLInputSheet: View {
         let url = inputURL.trimmingCharacters(in: .whitespaces)
         let name = inputName.trimmingCharacters(in: .whitespaces)
         let cmd = inputStartCommand.trimmingCharacters(in: .whitespaces)
+        let stopCmd = inputStopCommand.trimmingCharacters(in: .whitespaces)
         let icon = iconPath.trimmingCharacters(in: .whitespaces)
         guard !url.isEmpty else { return }
+        guard validateURL(url) != nil else {
+            urlValidationMessage = "请输入有效的 http:// 或 https:// URL"
+            return
+        }
+        guard !stopServiceOnClose || !stopCmd.isEmpty else {
+            urlValidationMessage = "开启自动停止时，请填写 Stop command"
+            return
+        }
+
+        urlValidationMessage = nil
         savedURL = url
         savedName = name
-        savePreset(url: url, name: name, startCommand: cmd, iconPath: icon)
+        savePreset(
+            url: url,
+            name: name,
+            startCommand: cmd,
+            stopCommand: stopCmd,
+            stopOnClose: stopServiceOnClose,
+            iconPath: icon
+        )
         // Apply the preset's icon to the app.
         if !icon.isEmpty, let img = NSImage(contentsOfFile: icon) {
             NSApplication.shared.applicationIconImage = img
         } else {
             NSApplication.shared.applicationIconImage = nil
         }
+        hasChanges = false
         isPresented = false
     }
 
@@ -284,6 +345,8 @@ struct URLInputSheet: View {
         hasChanges = !inputURL.trimmingCharacters(in: .whitespaces).isEmpty
             || !inputName.trimmingCharacters(in: .whitespaces).isEmpty
             || !inputStartCommand.trimmingCharacters(in: .whitespaces).isEmpty
+            || !inputStopCommand.trimmingCharacters(in: .whitespaces).isEmpty
+            || stopServiceOnClose
             || !iconPath.isEmpty
     }
 
@@ -292,7 +355,7 @@ struct URLInputSheet: View {
               let list = try? JSONDecoder().decode([URLEntry].self, from: data) else {
             return []
         }
-        return list.sorted { $0.isPinned && !$1.isPinned }
+        return orderedPresets(from: list)
     }
 
     private func deletePreset(url: String) {
@@ -305,25 +368,79 @@ struct URLInputSheet: View {
         var list = loadPresets().filter { $0.url != entry.url }
         var updated = entry
         updated.pinned = !entry.isPinned
-        list.insert(updated, at: updated.isPinned ? 0 : list.count)
+        let insertionIndex = updated.isPinned ? 0 : list.prefix { $0.isPinned }.count
+        list.insert(updated, at: insertionIndex)
         savePresetsList(list)
         presetsVersion += 1
     }
 
     private func savePresetsList(_ list: [URLEntry]) {
-        if let data = try? JSONEncoder().encode(list) {
+        let normalized = limitedPresets(list)
+        if let data = try? JSONEncoder().encode(normalized) {
             UserDefaults.standard.set(data, forKey: "urlPresets")
         }
     }
 
-    private func savePreset(url: String, name: String, startCommand: String?, iconPath: String? = nil) {
+    private func savePreset(
+        url: String,
+        name: String,
+        startCommand: String?,
+        stopCommand: String?,
+        stopOnClose: Bool,
+        iconPath: String? = nil
+    ) {
         let existing = loadPresets().first(where: { $0.url == url })
         var list = loadPresets().filter { $0.url != url }
-        var entry = URLEntry(url: url, name: name, startCommand: startCommand, iconPath: iconPath)
+        var entry = URLEntry(
+            url: url,
+            name: name,
+            startCommand: startCommand,
+            stopCommand: stopCommand,
+            stopOnClose: stopOnClose,
+            iconPath: iconPath
+        )
         entry.pinned = existing?.isPinned ?? false
-        list.insert(entry, at: entry.isPinned ? 0 : list.count)
-        if list.count > 5 { list = Array(list.prefix(5)) }
+        let insertionIndex = entry.isPinned ? 0 : list.prefix { $0.isPinned }.count
+        list.insert(entry, at: insertionIndex)
         savePresetsList(list)
+    }
+
+    private func openPreset(_ entry: URLEntry) {
+        inputURL = entry.url
+        inputName = entry.name
+        inputStartCommand = entry.startCommand ?? ""
+        inputStopCommand = entry.stopCommand ?? ""
+        stopServiceOnClose = entry.shouldStopOnClose
+        iconPath = entry.iconPath ?? ""
+        saveAndClose()
+    }
+
+    private func validateURL(_ rawURL: String) -> URL? {
+        guard let url = URL(string: rawURL),
+              let scheme = url.scheme?.lowercased(),
+              ["http", "https"].contains(scheme),
+              url.host != nil else {
+            return nil
+        }
+        return url
+    }
+
+    private func orderedPresets(from list: [URLEntry]) -> [URLEntry] {
+        let pinned = list.filter { $0.isPinned }
+        let unpinned = list.filter { !$0.isPinned }
+        return pinned + unpinned
+    }
+
+    private func limitedPresets(_ list: [URLEntry]) -> [URLEntry] {
+        var normalized = orderedPresets(from: list)
+        while normalized.count > 10 {
+            if let index = normalized.lastIndex(where: { !$0.isPinned }) {
+                normalized.remove(at: index)
+            } else {
+                normalized.removeLast()
+            }
+        }
+        return normalized
     }
 
     // MARK: - Browse Script
@@ -337,6 +454,18 @@ struct URLInputSheet: View {
 
         if panel.runModal() == .OK, let url = panel.url {
             inputStartCommand = url.path
+        }
+    }
+
+    private func pickStopScript() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.unixExecutable, .shellScript, .data]
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        panel.message = "Choose a stop script"
+
+        if panel.runModal() == .OK, let url = panel.url {
+            inputStopCommand = url.path
         }
     }
 
@@ -389,8 +518,11 @@ struct URLEntry: Codable, Hashable {
     let url: String
     let name: String
     var startCommand: String?
+    var stopCommand: String?
+    var stopOnClose: Bool?
     var iconPath: String?
     var pinned: Bool?
 
     var isPinned: Bool { pinned == true }
+    var shouldStopOnClose: Bool { stopOnClose == true }
 }

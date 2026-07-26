@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 struct ContentView: View {
     @Binding var savedURL: String
@@ -10,15 +11,24 @@ struct ContentView: View {
     @State private var reloadToken: UUID = UUID()
     @State private var settingsHasChanges: Bool = false
     @State private var showDiscardAlert: Bool = false
+    @State private var hostWindow: NSWindow?
+
+    private var currentEntry: URLEntry? {
+        preset(for: savedURL)
+    }
 
     private var startCommand: String? {
-        guard let data = UserDefaults.standard.data(forKey: "urlPresets"),
-              let list = try? JSONDecoder().decode([URLEntry].self, from: data),
-              let entry = list.first(where: { $0.url == savedURL }),
-              let cmd = entry.startCommand, !cmd.isEmpty else {
-            return nil
-        }
+        guard let cmd = currentEntry?.startCommand, !cmd.isEmpty else { return nil }
         return cmd
+    }
+
+    private var stopCommand: String? {
+        guard let cmd = currentEntry?.stopCommand, !cmd.isEmpty else { return nil }
+        return cmd
+    }
+
+    private var shouldStopOnClose: Bool {
+        currentEntry?.shouldStopOnClose == true
     }
 
     private var hasStartCommand: Bool {
@@ -59,6 +69,7 @@ struct ContentView: View {
                 .transition(.scale.combined(with: .opacity))
             }
         }
+        .background(WindowAccessor(window: $hostWindow))
         .animation(.easeInOut(duration: 0.2), value: showURLSheet)
         .navigationTitle(displayTitle)
         .toolbar {
@@ -96,11 +107,22 @@ struct ContentView: View {
                 tryStartService()
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.willCloseNotification)) { notification in
+            guard let window = notification.object as? NSWindow,
+                  window == hostWindow else {
+                return
+            }
+            handleWindowClose()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in
+            handleWindowClose()
+        }
         .onChange(of: savedURL) { _, newValue in
             if !newValue.isEmpty {
+                let shouldStopPreviousService = preset(for: currentURL)?.shouldStopOnClose == true
                 currentURL = newValue
                 serviceReady = false
-                serviceStarter.reset()
+                serviceStarter.reset(runStopCommand: shouldStopPreviousService)
                 tryStartService()
             }
         }
@@ -171,17 +193,31 @@ struct ContentView: View {
             serviceReady = true
             return
         }
-        serviceStarter.start(command: cmd, healthURL: currentURL)
+        serviceStarter.start(command: cmd, healthURL: currentURL, stopCommand: stopCommand)
     }
 
     private func performRefresh() {
         if hasStartCommand, let cmd = startCommand {
             serviceReady = false
-            serviceStarter.reset()
-            serviceStarter.start(command: cmd, healthURL: currentURL)
+            serviceStarter.reset(runStopCommand: shouldStopOnClose)
+            serviceStarter.start(command: cmd, healthURL: currentURL, stopCommand: stopCommand)
         } else {
             reloadToken = UUID()
         }
+    }
+
+    private func handleWindowClose() {
+        guard shouldStopOnClose else { return }
+        serviceStarter.stopCurrentService()
+    }
+
+    private func preset(for url: String) -> URLEntry? {
+        guard !url.isEmpty,
+              let data = UserDefaults.standard.data(forKey: "urlPresets"),
+              let list = try? JSONDecoder().decode([URLEntry].self, from: data) else {
+            return nil
+        }
+        return list.first(where: { $0.url == url })
     }
 
     // MARK: - Empty State
@@ -215,5 +251,23 @@ struct ContentView: View {
             return host + (u.path == "/" ? "" : u.path)
         }
         return currentURL.isEmpty ? "Windowed" : currentURL
+    }
+}
+
+private struct WindowAccessor: NSViewRepresentable {
+    @Binding var window: NSWindow?
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        DispatchQueue.main.async {
+            self.window = view.window
+        }
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        DispatchQueue.main.async {
+            self.window = nsView.window
+        }
     }
 }

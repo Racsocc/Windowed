@@ -7,8 +7,11 @@
 ## 功能
 
 - **自定义显示名称** — 显示在窗口标题栏
-- **URL 历史** — 自动记住最近 5 条 URL，一键切换
-- **自定义 app 图标** — 从本地选图片作为 Dock/台前调度图标
+- **URL 历史** — 自动记住最近 10 条 URL，支持置顶常用项
+- **自定义 app 图标** — 从本地选 icon 作为 Dock/台前调度图标
+- **本地服务自动启动** — 为本地 URL 预设 `start` 命令，打开时自动拉起服务
+- **按预设可选自动停止** — 可为单个预设启用“关闭窗口时停止服务”，并单独配置 `stop` 命令
+- **网页原生弹窗支持** — 支持 `alert()`、`confirm()`、`prompt()`，适配网页内删除确认、输入框等交互
 - **零依赖** — 纯 SwiftUI + WebKit，无第三方框架
 - **自包含** — 单个 .app，无需安装步骤
 
@@ -19,13 +22,23 @@
 3. 网页在原生 macOS 窗口中加载
 4. 随时按 `⌘U` 或点齿轮按钮修改 URL
 
+### 本地服务预设
+
+如果你的地址是本地服务，比如 `http://127.0.0.1:18789/chat?session=main`，可以在设置面板里额外填写：
+
+- **Start command**：例如 `~/hermes-webui/ctl.sh start`
+- **Stop service when window closes**：按预设开启，默认关闭
+- **Stop command**：例如 `~/hermes-webui/ctl.sh stop`
+
+这样 Windowed 会在打开该预设时尝试启动服务，并在你明确启用的前提下，于关闭窗口或退出 App 时执行对应的停止命令。
+
 ### 自定义图标
 
-在设置弹窗中，点击 **Set App Icon**，选择 `.png`、`.jpg`、`.icns` 或 `.tiff` 文件。图标会跨启动持久保存。点击 **Remove Icon** 恢复默认图标。
+在设置弹窗中，点击 **Choose Icon…**，选择 `.png`、`.jpg`、`.icns` 或 `.tiff` 文件。图标会跨启动持久保存。点击 **Remove** 恢复默认图标。
 
-### 分享给他人
+### 无法打开，因为无法验证开发者
 
-应用未签名，接收方需要：
+由于应用没有经过 Apple 开发者签名和公证，可能需要：
 
 ```bash
 # 去除隔离标记 + ad-hoc 签名
@@ -44,16 +57,22 @@ codesign --force --deep --sign - /Applications/Windowed.app
 cd /path/to/Windowed
 swift build -c release
 
+# 如果遇到 sandbox 权限问题，可改用
+swift build -c release --disable-sandbox
+
 # 创建 .app 包
-mkdir -p Windowed.app/Contents/MacOS Windowed.app/Contents/Resources
-cp .build/release/Windowed Windowed.app/Contents/MacOS/
-cp Info.plist Windowed.app/Contents/
+mkdir -p dist/Windowed.app/Contents/MacOS dist/Windowed.app/Contents/Resources
+cp .build/release/Windowed dist/Windowed.app/Contents/MacOS/
+cp Info.plist dist/Windowed.app/Contents/
 
 # 可选：添加自定义图标
-cp Windowed.icns Windowed.app/Contents/Resources/
+cp Windowed.icns dist/Windowed.app/Contents/Resources/
+
+# 可选：ad-hoc 签名
+codesign --force --deep --sign - dist/Windowed.app
 
 # 移动到 Applications
-mv Windowed.app /Applications/
+mv dist/Windowed.app /Applications/
 
 # 清理构建缓存
 rm -rf .build
@@ -70,9 +89,10 @@ Windowed/
 ├── README_CN.md               # 中文说明（本文件）
 └── Sources/WebShell/          # 源代码
     ├── App.swift              # 应用入口，窗口配置
-    ├── ContentView.swift      # 主视图，工具栏，URL 状态管理
-    ├── WebView.swift          # WKWebView 封装（NSViewRepresentable）
-    └── URLInputSheet.swift    # 设置弹窗：URL 输入、名称、图标、历史
+    ├── ContentView.swift      # 主视图，工具栏，URL 状态管理，本地服务启停
+    ├── ServiceStarter.swift   # 本地服务启动、健康检查、停止命令调度
+    ├── WebView.swift          # WKWebView 封装，含网页原生弹窗支持
+    └── URLInputSheet.swift    # 设置弹窗：URL、名称、图标、历史、启停命令
 ```
 
 ## 技术栈
@@ -80,10 +100,11 @@ Windowed/
 - **Swift 6.3** + **SwiftUI** — 应用框架
 - **WKWebView**（WebKit）— 网页渲染
 - **NSViewRepresentable** — 将 WKWebView 桥接到 SwiftUI
-- **UserDefaults** — 持久化存储 URL、名称、图标路径、历史记录
+- **UserDefaults** — 持久化存储 URL、名称、图标路径、历史记录、启停配置
 - **NSOpenPanel** — 自定义图标的文件选择器
+- **Process / Timer / URLSession** — 本地服务拉起、轮询健康检查、执行停止命令
 
-无第三方依赖。一个 `Package.swift`，四个源文件。
+无第三方依赖。一个 `Package.swift`，五个源文件。
 
 ## 架构
 
@@ -97,16 +118,23 @@ Windowed/
 │  ContentView                                │
 │  ├─ 工具栏：标题 | 设置 | 刷新               │
 │  ├─ 空状态 → 设置 URL 按钮                   │
+│  ├─ 本地预设 → ServiceStarter               │
 │  └─ 加载状态 → WebView                      │
+├─────────────────────────────────────────────┤
+│  ServiceStarter                             │
+│  ├─ 执行 start / stop 命令                  │
+│  ├─ 轮询本地地址健康状态                     │
+│  └─ 避免重复启动，按需停止服务               │
 ├─────────────────────────────────────────────┤
 │  WebView (NSViewRepresentable)              │
 │  ├─ 封装 WKWebView 供 SwiftUI 使用           │
-│  ├─ 处理导航、错误                           │
+│  ├─ 处理导航、错误、JS 原生弹窗              │
 │  └─ 用网页标题更新窗口标题                   │
 ├─────────────────────────────────────────────┤
 │  URLInputSheet                              │
 │  ├─ 显示名称 + URL 输入                      │
-│  ├─ 历史列表（最多 5 条）                    │
+│  ├─ 历史列表（最多 10 条，可置顶）           │
+│  ├─ 启动 / 停止命令配置                      │
 │  └─ 图标选择器（NSOpenPanel → bundle）       │
 └─────────────────────────────────────────────┘
 ```
