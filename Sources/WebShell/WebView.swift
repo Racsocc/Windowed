@@ -116,6 +116,27 @@ struct WebView: NSViewRepresentable {
             }
         }
 
+        func webView(
+            _ webView: WKWebView,
+            runOpenPanelWith parameters: WKOpenPanelParameters,
+            initiatedByFrame frame: WKFrameInfo,
+            completionHandler: @escaping ([URL]?) -> Void
+        ) {
+            let panel = NSOpenPanel()
+            panel.canChooseFiles = true
+            panel.canChooseDirectories = parameters.allowsDirectories
+            panel.allowsMultipleSelection = parameters.allowsMultipleSelection
+            panel.message = parameters.allowsMultipleSelection ? "Choose files to upload" : "Choose a file to upload"
+
+            if let window = webView.window {
+                panel.beginSheetModal(for: window) { response in
+                    completionHandler(response == .OK ? panel.urls : nil)
+                }
+            } else {
+                completionHandler(panel.runModal() == .OK ? panel.urls : nil)
+            }
+        }
+
         private func showError(_ webView: WKWebView, error: Error) {
             let html = """
             <html><body style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:-apple-system,sans-serif;background:#fefefe;color:#333;">

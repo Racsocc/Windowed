@@ -1,40 +1,45 @@
 import SwiftUI
 import AppKit
 
-@main
-struct WindowedApp: App {
-    @AppStorage("savedURL") private var savedURL: String = ""
-    @AppStorage("savedName") private var savedName: String = ""
-    @State private var showURLSheet: Bool = false
+enum WindowedScene {
+    static let browser = "browser"
+}
 
-    init() {
-        // Load icon from the active preset on launch.
-        if let data = UserDefaults.standard.data(forKey: "urlPresets"),
-           let list = try? JSONDecoder().decode([URLEntry].self, from: data),
-           let entry = list.first(where: { $0.url == savedURL }),
-           let path = entry.iconPath, !path.isEmpty,
-           let img = NSImage(contentsOfFile: path) {
-            NSApplication.shared.applicationIconImage = img
+extension Notification.Name {
+    static let windowedOpenSettingsRequested = Notification.Name("windowedOpenSettingsRequested")
+}
+
+struct WindowedCommands: Commands {
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some Commands {
+        CommandGroup(replacing: .newItem) {
+            Button("New Window") {
+                openWindow(id: WindowedScene.browser, value: WindowConfig())
+            }
+            .keyboardShortcut("n", modifiers: .command)
+        }
+
+        CommandGroup(after: .newItem) {
+            Button("Change URL…") {
+                NotificationCenter.default.post(name: .windowedOpenSettingsRequested, object: nil)
+            }
+            .keyboardShortcut("u", modifiers: .command)
         }
     }
+}
 
+@main
+struct WindowedApp: App {
     var body: some Scene {
-        WindowGroup {
-            ContentView(savedURL: $savedURL, savedName: $savedName, showURLSheet: $showURLSheet)
-                .onAppear {
-                    if savedURL.isEmpty {
-                        showURLSheet = true
-                    }
-                }
+        WindowGroup(id: WindowedScene.browser, for: WindowConfig.self) { $windowConfig in
+            ContentView(windowConfig: $windowConfig)
+        } defaultValue: {
+            WindowConfigStore.loadLastUsed() ?? WindowConfig()
         }
         .windowStyle(.automatic)
         .commands {
-            CommandGroup(after: .newItem) {
-                Button("Change URL…") {
-                    showURLSheet = true
-                }
-                .keyboardShortcut("u", modifiers: .command)
-            }
+            WindowedCommands()
         }
     }
 }

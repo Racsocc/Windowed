@@ -2,10 +2,10 @@ import SwiftUI
 import AppKit
 
 struct URLInputSheet: View {
-    @Binding var savedURL: String
-    @Binding var savedName: String
+    @Binding var windowConfig: WindowConfig
     @Binding var isPresented: Bool
     @Binding var hasChanges: Bool
+    let openInNewWindow: (WindowConfig) -> Void
     @State private var inputURL: String = ""
     @State private var inputName: String = ""
     @State private var inputStartCommand: String = ""
@@ -39,39 +39,21 @@ struct URLInputSheet: View {
                 }
 
                 Section {
-                    HStack(alignment: .top) {
-                        ZStack(alignment: .topLeading) {
-                            if inputStartCommand.isEmpty {
-                                Text("~/hermes-webui/ctl.sh start")
-                                    .font(.system(.callout, design: .monospaced))
-                                    .foregroundStyle(.quaternary)
-                                    .padding(.top, 4)
-                                    .padding(.leading, 4)
-                            }
-                            TextEditor(text: $inputStartCommand)
-                                .font(.system(.callout, design: .monospaced))
-                                .frame(minHeight: 44, maxHeight: 88)
-                                .scrollContentBackground(.hidden)
-                        }
+                    HStack(alignment: .center) {
+                        commandField(
+                            text: $inputStartCommand,
+                            placeholder: "~/hermes-webui/ctl.sh start"
+                        )
                         Button("Browse…") { pickScript() }
                             .controlSize(.small)
                     }
                     Toggle("Stop service when window closes", isOn: $stopServiceOnClose)
                     if stopServiceOnClose {
-                        HStack(alignment: .top) {
-                            ZStack(alignment: .topLeading) {
-                                if inputStopCommand.isEmpty {
-                                    Text("~/hermes-webui/ctl.sh stop")
-                                        .font(.system(.callout, design: .monospaced))
-                                        .foregroundStyle(.quaternary)
-                                        .padding(.top, 4)
-                                        .padding(.leading, 4)
-                                }
-                                TextEditor(text: $inputStopCommand)
-                                    .font(.system(.callout, design: .monospaced))
-                                    .frame(minHeight: 44, maxHeight: 88)
-                                    .scrollContentBackground(.hidden)
-                            }
+                        HStack(alignment: .center) {
+                            commandField(
+                                text: $inputStopCommand,
+                                placeholder: "~/hermes-webui/ctl.sh stop"
+                            )
                             Button("Browse…") { pickStopScript() }
                                 .controlSize(.small)
                         }
@@ -130,13 +112,7 @@ struct URLInputSheet: View {
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .shadow(color: .black.opacity(0.2), radius: 20, y: 10)
         .onAppear {
-            // Start blank — ready to add a new entry.
-            inputURL = ""
-            inputName = ""
-            inputStartCommand = ""
-            inputStopCommand = ""
-            stopServiceOnClose = false
-            iconPath = ""
+            loadFromWindowConfig()
             hasChanges = false
             urlValidationMessage = nil
         }
@@ -152,6 +128,11 @@ struct URLInputSheet: View {
     }
 
     // MARK: - Icon
+
+    private func commandField(text: Binding<String>, placeholder: String) -> some View {
+        AppKitCommandField(text: text, placeholder: placeholder)
+            .frame(minHeight: 36)
+    }
 
     private var iconSection: some View {
         VStack(spacing: 6) {
@@ -190,7 +171,6 @@ struct URLInputSheet: View {
                         .foregroundStyle(.quaternary)
                     Button("Remove") {
                         iconPath = ""
-                        setAppIcon(nil)
                     }
                     .buttonStyle(.plain)
                     .font(.callout)
@@ -253,6 +233,17 @@ struct URLInputSheet: View {
             .onTapGesture {
                 openPreset(entry)
             }
+
+            Button {
+                openPreset(entry, forceNewWindow: true)
+            } label: {
+                Image(systemName: "plus.square.on.square")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .help("Open in new window")
+            .offset(x: -24, y: 0)
 
             Button {
                 togglePin(entry)
@@ -321,8 +312,12 @@ struct URLInputSheet: View {
         }
 
         urlValidationMessage = nil
-        savedURL = url
-        savedName = name
+        windowConfig.url = url
+        windowConfig.name = name
+        windowConfig.startCommand = cmd.isEmpty ? nil : cmd
+        windowConfig.stopCommand = stopCmd.isEmpty ? nil : stopCmd
+        windowConfig.stopOnClose = stopServiceOnClose
+        windowConfig.iconPath = icon.isEmpty ? nil : icon
         savePreset(
             url: url,
             name: name,
@@ -331,23 +326,17 @@ struct URLInputSheet: View {
             stopOnClose: stopServiceOnClose,
             iconPath: icon
         )
-        // Apply the preset's icon to the app.
-        if !icon.isEmpty, let img = NSImage(contentsOfFile: icon) {
-            NSApplication.shared.applicationIconImage = img
-        } else {
-            NSApplication.shared.applicationIconImage = nil
-        }
         hasChanges = false
         isPresented = false
     }
 
     private func updateHasChanges() {
-        hasChanges = !inputURL.trimmingCharacters(in: .whitespaces).isEmpty
-            || !inputName.trimmingCharacters(in: .whitespaces).isEmpty
-            || !inputStartCommand.trimmingCharacters(in: .whitespaces).isEmpty
-            || !inputStopCommand.trimmingCharacters(in: .whitespaces).isEmpty
-            || stopServiceOnClose
-            || !iconPath.isEmpty
+        hasChanges = inputURL.trimmingCharacters(in: .whitespaces) != windowConfig.url
+            || inputName.trimmingCharacters(in: .whitespaces) != windowConfig.name
+            || normalized(inputStartCommand) != normalized(windowConfig.startCommand ?? "")
+            || normalized(inputStopCommand) != normalized(windowConfig.stopCommand ?? "")
+            || stopServiceOnClose != windowConfig.stopOnClose
+            || normalized(iconPath) != normalized(windowConfig.iconPath ?? "")
     }
 
     private func loadPresets() -> [URLEntry] {
@@ -405,14 +394,34 @@ struct URLInputSheet: View {
         savePresetsList(list)
     }
 
-    private func openPreset(_ entry: URLEntry) {
-        inputURL = entry.url
-        inputName = entry.name
-        inputStartCommand = entry.startCommand ?? ""
-        inputStopCommand = entry.stopCommand ?? ""
-        stopServiceOnClose = entry.shouldStopOnClose
-        iconPath = entry.iconPath ?? ""
-        saveAndClose()
+    private func openPreset(_ entry: URLEntry, forceNewWindow: Bool = false) {
+        if shouldOpenPresetInCurrentWindow(forceNewWindow: forceNewWindow) {
+            inputURL = entry.url
+            inputName = entry.name
+            inputStartCommand = entry.startCommand ?? ""
+            inputStopCommand = entry.stopCommand ?? ""
+            stopServiceOnClose = entry.shouldStopOnClose
+            iconPath = entry.iconPath ?? ""
+            saveAndClose()
+        } else {
+            openInNewWindow(entry.makeWindowConfig())
+        }
+    }
+
+    private func shouldOpenPresetInCurrentWindow(forceNewWindow: Bool) -> Bool {
+        if forceNewWindow {
+            return false
+        }
+
+        if normalized(windowConfig.url).isEmpty {
+            return true
+        }
+
+        let activeWindowCount = NSApp.windows.filter { window in
+            window.isVisible && !window.isMiniaturized
+        }.count
+
+        return activeWindowCount <= 1
     }
 
     private func validateURL(_ rawURL: String) -> URL? {
@@ -499,9 +508,6 @@ struct URLInputSheet: View {
 
     private func applyIcon(_ path: String) {
         iconPath = path
-        if let img = NSImage(contentsOfFile: path) {
-            setAppIcon(img)
-        }
     }
 
     private func loadIcon() -> NSImage? {
@@ -509,8 +515,120 @@ struct URLInputSheet: View {
         return img
     }
 
-    private func setAppIcon(_ image: NSImage?) {
-        NSApplication.shared.applicationIconImage = image
+    private func loadFromWindowConfig() {
+        inputURL = windowConfig.url
+        inputName = windowConfig.name
+        inputStartCommand = windowConfig.startCommand ?? ""
+        inputStopCommand = windowConfig.stopCommand ?? ""
+        stopServiceOnClose = windowConfig.stopOnClose
+        iconPath = windowConfig.iconPath ?? ""
+    }
+
+    private func normalized(_ value: String) -> String {
+        value.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+}
+
+private struct AppKitCommandField: NSViewRepresentable {
+    @Binding var text: String
+    let placeholder: String
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(text: $text)
+    }
+
+    func makeNSView(context: Context) -> NSTextField {
+        let textField = PaddedCommandTextField()
+        textField.delegate = context.coordinator
+        textField.stringValue = text
+        textField.placeholderString = placeholder
+        textField.font = NSFont.monospacedSystemFont(
+            ofSize: NSFont.preferredFont(forTextStyle: .callout).pointSize,
+            weight: .regular
+        )
+        textField.isBordered = false
+        textField.isBezeled = false
+        textField.drawsBackground = false
+        textField.focusRingType = .none
+        textField.usesSingleLineMode = true
+        textField.lineBreakMode = .byClipping
+        textField.maximumNumberOfLines = 1
+        textField.cell?.usesSingleLineMode = true
+        textField.cell?.wraps = false
+        textField.cell?.isScrollable = true
+        textField.cell?.lineBreakMode = .byClipping
+        return textField
+    }
+
+    func updateNSView(_ nsView: NSTextField, context: Context) {
+        if nsView.stringValue != text {
+            nsView.stringValue = text
+            if let editor = nsView.currentEditor() {
+                editor.selectedRange = NSRange(location: 0, length: 0)
+            }
+        }
+
+        if nsView.placeholderString != placeholder {
+            nsView.placeholderString = placeholder
+        }
+    }
+
+    final class Coordinator: NSObject, NSTextFieldDelegate {
+        @Binding var text: String
+
+        init(text: Binding<String>) {
+            _text = text
+        }
+
+        func controlTextDidChange(_ notification: Notification) {
+            guard let textField = notification.object as? NSTextField else { return }
+            text = textField.stringValue
+        }
+    }
+}
+
+private final class PaddedCommandTextField: NSTextField {
+    override class var cellClass: AnyClass? {
+        get { PaddedCommandTextFieldCell.self }
+        set { }
+    }
+}
+
+private final class PaddedCommandTextFieldCell: NSTextFieldCell {
+    private let horizontalPadding: CGFloat = 12
+    private let verticalPadding: CGFloat = 4
+
+    override func drawingRect(forBounds rect: NSRect) -> NSRect {
+        adjustedRect(for: super.drawingRect(forBounds: rect))
+    }
+
+    override func edit(withFrame rect: NSRect, in controlView: NSView, editor textObj: NSText, delegate: Any?, event: NSEvent?) {
+        super.edit(
+            withFrame: adjustedRect(for: rect),
+            in: controlView,
+            editor: textObj,
+            delegate: delegate,
+            event: event
+        )
+    }
+
+    override func select(withFrame rect: NSRect, in controlView: NSView, editor textObj: NSText, delegate: Any?, start selStart: Int, length selLength: Int) {
+        super.select(
+            withFrame: adjustedRect(for: rect),
+            in: controlView,
+            editor: textObj,
+            delegate: delegate,
+            start: selStart,
+            length: selLength
+        )
+    }
+
+    override func titleRect(forBounds rect: NSRect) -> NSRect {
+        adjustedRect(for: super.titleRect(forBounds: rect))
+    }
+
+    private func adjustedRect(for rect: NSRect) -> NSRect {
+        rect.insetBy(dx: horizontalPadding, dy: verticalPadding)
     }
 }
 

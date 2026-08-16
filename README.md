@@ -8,12 +8,15 @@ Originally built to wrap [Hermes WebUI](https://github.com/nesquena/hermes-webui
 
 ## Features
 
+- **Single-app multi-window** — open multiple independent web windows under one Dock icon, with `⌘N`
+- **Restore last page** — reopen the last used single page on launch, and fall back to a blank setup window when no saved page is available
 - **Custom display name** — shown in the window title bar
 - **URL history** — remembers up to 10 recent URLs with pin support for favorites
-- **Custom app icon** — pick any local image as the Dock/Stage Manager icon
+- **Custom preset icon** — pick any local image as a visual marker in the preset list
 - **Local service auto-start** — attach a `start` command to local URL presets and launch services automatically
 - **Optional stop-on-close per preset** — enable stopping a service when the window closes and provide a matching `stop` command
 - **Native web dialog support** — supports `alert()`, `confirm()`, and `prompt()` for delete confirmations and input flows
+- **Web file upload support** — supports file, image, and multi-file selection with the native Finder panel
 - **Zero dependencies** — pure SwiftUI + WebKit, no frameworks, no bundler
 - **Self-contained** — single .app, no install step
 
@@ -22,7 +25,20 @@ Originally built to wrap [Hermes WebUI](https://github.com/nesquena/hermes-webui
 1. Launch `Windowed.app`
 2. Enter a display name (optional) and URL
 3. The web page loads in a native macOS window
-4. Use `⌘U` or the gear button to change URL anytime
+4. Use `⌘U` or the gear button to change the current window URL anytime
+5. Press `⌘N` to open a new blank window
+
+### Multi-window
+
+- `⌘N` opens a new independent window
+- Each window has its own URL, display name, and service lifecycle
+- Clicking a history preset opens it in a new window by default
+
+### Launch behavior
+
+- On launch, Windowed first tries to restore the last used single page
+- If there is no saved page, it opens a blank setup window instead
+- Blank setup windows size themselves to about `70%` of the visible screen width and `80%` of the visible screen height
 
 ### Local Service Presets
 
@@ -36,7 +52,7 @@ Windowed will try to start the service when that preset opens, and only run the 
 
 ### Custom Icon
 
-In the settings sheet, click **Choose Icon…** and pick a `.png`, `.jpg`, `.icns`, or `.tiff` file. The icon persists across launches. Click **Remove** to revert to default.
+In the settings sheet, click **Choose Icon…** and pick a `.png`, `.jpg`, `.icns`, or `.tiff` file. The icon persists as a visual marker for that preset in the history list across launches. The Dock icon stays fixed as the default `Windowed` app icon and does not change per window or preset. Click **Remove** to clear the preset icon.
 
 ### Can't Open Because Apple Cannot Check It for Malicious Software
 
@@ -90,10 +106,11 @@ Windowed/
 ├── README.md
 ├── README_CN.md               # Chinese guide
 └── Sources/WebShell/          # Source code
-    ├── App.swift              # App entry point, window setup
-    ├── ContentView.swift      # Main view, toolbar, URL state, service lifecycle
+    ├── App.swift              # App entry point, multi-window scene setup
+    ├── ContentView.swift      # Main view, per-window URL state, service lifecycle
     ├── ServiceStarter.swift   # Local service start, health checks, stop dispatch
-    ├── WebView.swift          # WKWebView wrapper with native JS dialog support
+    ├── WebView.swift          # WKWebView wrapper with JS dialogs and file upload support
+    ├── WindowConfig.swift     # Window instance model
     └── URLInputSheet.swift    # Settings sheet: URL, name, icon, history, start/stop commands
 ```
 
@@ -113,13 +130,13 @@ No third-party dependencies. One `Package.swift`, five source files.
 ```
 ┌─────────────────────────────────────────────┐
 │  WindowedApp (@main)                        │
-│  ├─ Loads saved URL/name/icon from storage  │
-│  ├─ Shows URLInputSheet on first launch     │
-│  └─ WindowGroup → ContentView               │
+│  ├─ WindowGroup(for: WindowConfig)          │
+│  ├─ Supports multiple windows               │
+│  └─ ContentView with per-window state       │
 ├─────────────────────────────────────────────┤
 │  ContentView                                │
 │  ├─ Toolbar: title | gear | reload          │
-│  ├─ Empty state → Set URL button            │
+│  ├─ Per-window URL / name / service state   │
 │  ├─ Local presets → ServiceStarter          │
 │  └─ Loaded state → WebView                  │
 ├─────────────────────────────────────────────┤
@@ -131,6 +148,7 @@ No third-party dependencies. One `Package.swift`, five source files.
 │  WebView (NSViewRepresentable)              │
 │  ├─ Wraps WKWebView for SwiftUI             │
 │  ├─ Handles navigation, errors, JS dialogs  │
+│  ├─ Handles web file upload                 │
 │  └─ Updates window title from page title    │
 ├─────────────────────────────────────────────┤
 │  URLInputSheet                              │
