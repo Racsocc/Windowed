@@ -5,6 +5,13 @@ enum WindowedScene {
     static let browser = "browser"
 }
 
+final class WindowedAppDelegate: NSObject, NSApplicationDelegate {
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        WindowSessionRegistry.shared.beginTermination()
+        return .terminateNow
+    }
+}
+
 extension Notification.Name {
     static let windowedOpenSettingsRequested = Notification.Name("windowedOpenSettingsRequested")
 }
@@ -31,11 +38,13 @@ struct WindowedCommands: Commands {
 
 @main
 struct WindowedApp: App {
+    @NSApplicationDelegateAdaptor(WindowedAppDelegate.self) private var appDelegate
+
     var body: some Scene {
         WindowGroup(id: WindowedScene.browser, for: WindowConfig.self) { $windowConfig in
             ContentView(windowConfig: $windowConfig)
         } defaultValue: {
-            WindowConfigStore.loadLastUsed() ?? WindowConfig()
+            WindowRestoreCoordinator.shared.initialWindowConfig
         }
         .windowStyle(.automatic)
         .commands {

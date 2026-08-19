@@ -90,7 +90,7 @@ struct ContentView: View {
                 .disabled(currentURL.isEmpty)
             }
         }
-        .frame(minWidth: 800, minHeight: 500)
+        .frame(minWidth: 800, minHeight: currentURL.isEmpty ? 800 : 500)
         .alert("Discard changes?", isPresented: $showDiscardAlert) {
             Button("Discard", role: .destructive) {
                 showURLSheet = false
@@ -101,6 +101,8 @@ struct ContentView: View {
             Text("You have unsaved changes.")
         }
         .onAppear {
+            WindowRestoreCoordinator.shared.restoreAdditionalWindows(openWindow: openNewWindow)
+            WindowSessionRegistry.shared.upsert(windowConfig)
             currentURL = windowConfig.url
             if currentURL.isEmpty {
                 showURLSheet = true
@@ -111,6 +113,10 @@ struct ContentView: View {
         }
         .onChange(of: hostWindow?.windowNumber ?? -1) { _, _ in
             applyInitialWindowSizeIfNeeded()
+        }
+        .onChange(of: showURLSheet) { _, isShowing in
+            guard isShowing else { return }
+            ensureSettingsSheetFits()
         }
         .onReceive(NotificationCenter.default.publisher(for: .windowedOpenSettingsRequested)) { _ in
             guard hostWindow?.isKeyWindow == true else { return }
@@ -128,6 +134,7 @@ struct ContentView: View {
                   window == hostWindow else {
                 return
             }
+            WindowSessionRegistry.shared.remove(id: windowConfig.id)
             persistAsLastUsedIfNeeded()
             handleWindowClose()
         }
@@ -156,6 +163,8 @@ struct ContentView: View {
                 tryStartService()
                 persistAsLastUsedIfNeeded()
             }
+
+            WindowSessionRegistry.shared.upsert(newValue)
         }
     }
 
@@ -300,7 +309,7 @@ struct ContentView: View {
         let widthRatio: CGFloat = currentURL.isEmpty ? 0.7 : 0.72
         let heightRatio: CGFloat = currentURL.isEmpty ? 0.8 : 0.82
         let minimumWidth: CGFloat = currentURL.isEmpty ? 800 : 1000
-        let minimumHeight: CGFloat = currentURL.isEmpty ? 500 : 700
+        let minimumHeight: CGFloat = currentURL.isEmpty ? 800 : 700
 
         let targetContentWidth = min(max(minimumWidth, visibleFrame.width * widthRatio), visibleFrame.width)
         let targetContentHeight = min(max(minimumHeight, visibleFrame.height * heightRatio), visibleFrame.height)
@@ -318,6 +327,34 @@ struct ContentView: View {
         )
 
         window.setFrame(NSRect(origin: centeredOrigin, size: targetFrame.size), display: true, animate: false)
+    }
+
+    private func ensureSettingsSheetFits() {
+        guard let window = hostWindow else { return }
+
+        let visibleFrame = window.screen?.visibleFrame ?? NSScreen.main?.visibleFrame ?? .zero
+        guard visibleFrame.width > 0, visibleFrame.height > 0 else { return }
+
+        let minimumContentSize = NSSize(width: 800, height: 820)
+        let currentContentRect = window.contentLayoutRect
+        let targetContentRect = NSRect(
+            x: 0,
+            y: 0,
+            width: min(max(currentContentRect.width, minimumContentSize.width), visibleFrame.width),
+            height: min(max(currentContentRect.height, minimumContentSize.height), visibleFrame.height)
+        )
+        let targetFrame = window.frameRect(forContentRect: targetContentRect)
+
+        guard window.frame.height < targetFrame.height || window.frame.width < targetFrame.width else {
+            return
+        }
+
+        let adjustedOrigin = NSPoint(
+            x: min(max(window.frame.minX, visibleFrame.minX), visibleFrame.maxX - targetFrame.width),
+            y: min(max(window.frame.maxY - targetFrame.height, visibleFrame.minY), visibleFrame.maxY - targetFrame.height)
+        )
+
+        window.setFrame(NSRect(origin: adjustedOrigin, size: targetFrame.size), display: true, animate: true)
     }
 }
 

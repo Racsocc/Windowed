@@ -2,6 +2,19 @@
 
 本文件用于记录项目的重要功能、修复、架构调整与协作约定。
 
+## 1.2.0
+
+- 发布时间：2026-08-19
+- 发布摘要：重构设置面板交互，支持恢复上次关闭时的全部已配置窗口，并扩展历史记录容量
+- 主要变更：
+  - 新增：设置面板默认进入空白新建态，只有点击 History 编辑按钮时才载入已有条目
+  - 新增：启动时恢复上次关闭时的全部已配置窗口，空白草稿窗口不参与恢复
+  - 优化：本地服务在窗口恢复后继续按各自条目的 start / stop / stop-on-close 配置执行
+  - 优化：历史记录调整为 20 条普通项，置顶条目不限数量
+  - 优化：设置窗口默认高度调整为 800，更适合浏览较长配置内容
+- 构建产物：
+  - `Windowed-1.2.0.dmg`
+
 ## 1.1.0
 
 - 发布时间：2026-08-17
@@ -16,6 +29,32 @@
   - 优化：Auto-start / Stop command 输入框改为更稳定的原生 AppKit 命令输入控件
 - 构建产物：
   - `Windowed-1.1.0.dmg`
+
+## 2026-08-19
+
+- 类型：`feat`
+- 摘要：设置面板改为空白新建态，并支持启动时恢复上次关闭时的全部已配置窗口
+- 涉及文件：
+  - `Sources/WebShell/App.swift`
+  - `Sources/WebShell/ContentView.swift`
+  - `Sources/WebShell/URLInputSheet.swift`
+  - `Sources/WebShell/WindowConfig.swift`
+  - `README.md`
+  - `README_CN.md`
+  - `docs/CHANGELOG.md`
+- 验证情况：已通过 `swift build --disable-sandbox` 编译
+- 后续事项：手动验证多窗口恢复顺序，以及本地服务在恢复场景下的启停体验
+
+- 类型：`feat`
+- 摘要：历史记录扩展为 20 条普通项且置顶不限数量，并将设置窗口高度调整为 800
+- 涉及文件：
+  - `Sources/WebShell/ContentView.swift`
+  - `Sources/WebShell/URLInputSheet.swift`
+  - `README.md`
+  - `README_CN.md`
+  - `docs/CHANGELOG.md`
+- 验证情况：已通过 `swift build --disable-sandbox` 编译
+- 后续事项：手动确认大屏和小屏下设置窗口高度是否都舒适
 
 ## 记录格式
 
