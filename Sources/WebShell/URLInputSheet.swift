@@ -16,6 +16,8 @@ struct URLInputSheet: View {
     @State private var pendingDelete: URLEntry? = nil
     @State private var showDiscardAlert: Bool = false
     @State private var urlValidationMessage: String? = nil
+    @State private var baselineConfig: WindowConfig = WindowConfig()
+    @State private var editingPresetOriginalURL: String? = nil
 
     var body: some View {
         VStack(spacing: 0) {
@@ -100,7 +102,7 @@ struct URLInputSheet: View {
                 }
                 .keyboardShortcut(.cancelAction)
                 Spacer()
-                Button("Open") { saveAndClose() }
+                Button("Save") { saveAndClose() }
                     .keyboardShortcut(.defaultAction)
                     .disabled(inputURL.trimmingCharacters(in: .whitespaces).isEmpty)
             }
@@ -112,9 +114,7 @@ struct URLInputSheet: View {
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .shadow(color: .black.opacity(0.2), radius: 20, y: 10)
         .onAppear {
-            loadFromWindowConfig()
-            hasChanges = false
-            urlValidationMessage = nil
+            beginCreateMode()
         }
         .onChange(of: inputURL) { _, _ in
             urlValidationMessage = nil
@@ -258,13 +258,7 @@ struct URLInputSheet: View {
             .offset(x: -21, y: 2)
 
             Button {
-                // Load preset into fields for editing.
-                inputURL = entry.url
-                inputName = entry.name
-                inputStartCommand = entry.startCommand ?? ""
-                inputStopCommand = entry.stopCommand ?? ""
-                stopServiceOnClose = entry.shouldStopOnClose
-                iconPath = entry.iconPath ?? ""
+                beginEditMode(with: entry)
             } label: {
                 Image(systemName: "square.and.pencil")
                     .font(.system(size: 12, weight: .medium))
@@ -291,52 +285,42 @@ struct URLInputSheet: View {
 
     private var presetsHeight: CGFloat {
         let count = loadPresets().count
-        if count == 0 { return 260 }
-        return CGFloat(280 + min(count, 5) * 56)
+        let baseHeight: CGFloat = (count == 0) ? 320 : CGFloat(280 + min(count, 5) * 56)
+        return max(800, baseHeight)
     }
 
     private func saveAndClose() {
-        let url = inputURL.trimmingCharacters(in: .whitespaces)
-        let name = inputName.trimmingCharacters(in: .whitespaces)
-        let cmd = inputStartCommand.trimmingCharacters(in: .whitespaces)
-        let stopCmd = inputStopCommand.trimmingCharacters(in: .whitespaces)
-        let icon = iconPath.trimmingCharacters(in: .whitespaces)
-        guard !url.isEmpty else { return }
-        guard validateURL(url) != nil else {
+        let draft = makeDraftConfig()
+        guard draft.isConfigured else { return }
+        guard validateURL(draft.url) != nil else {
             urlValidationMessage = "请输入有效的 http:// 或 https:// URL"
             return
         }
-        guard !stopServiceOnClose || !stopCmd.isEmpty else {
+        guard !draft.stopOnClose || draft.stopCommand != nil else {
             urlValidationMessage = "开启自动停止时，请填写 Stop command"
             return
         }
 
         urlValidationMessage = nil
-        windowConfig.url = url
-        windowConfig.name = name
-        windowConfig.startCommand = cmd.isEmpty ? nil : cmd
-        windowConfig.stopCommand = stopCmd.isEmpty ? nil : stopCmd
-        windowConfig.stopOnClose = stopServiceOnClose
-        windowConfig.iconPath = icon.isEmpty ? nil : icon
+        apply(config: draft)
         savePreset(
-            url: url,
-            name: name,
-            startCommand: cmd,
-            stopCommand: stopCmd,
-            stopOnClose: stopServiceOnClose,
-            iconPath: icon
+            config: draft,
+            replacingURL: editingPresetOriginalURL
         )
+        baselineConfig = draft
+        editingPresetOriginalURL = draft.url
         hasChanges = false
         isPresented = false
     }
 
     private func updateHasChanges() {
-        hasChanges = inputURL.trimmingCharacters(in: .whitespaces) != windowConfig.url
-            || inputName.trimmingCharacters(in: .whitespaces) != windowConfig.name
-            || normalized(inputStartCommand) != normalized(windowConfig.startCommand ?? "")
-            || normalized(inputStopCommand) != normalized(windowConfig.stopCommand ?? "")
-            || stopServiceOnClose != windowConfig.stopOnClose
-            || normalized(iconPath) != normalized(windowConfig.iconPath ?? "")
+        let draft = makeDraftConfig()
+        hasChanges = draft.url != baselineConfig.url
+            || draft.name != baselineConfig.name
+            || normalized(draft.startCommand ?? "") != normalized(baselineConfig.startCommand ?? "")
+            || normalized(draft.stopCommand ?? "") != normalized(baselineConfig.stopCommand ?? "")
+            || draft.stopOnClose != baselineConfig.stopOnClose
+            || normalized(draft.iconPath ?? "") != normalized(baselineConfig.iconPath ?? "")
     }
 
     private func loadPresets() -> [URLEntry] {
@@ -350,6 +334,9 @@ struct URLInputSheet: View {
     private func deletePreset(url: String) {
         let list = loadPresets().filter { $0.url != url }
         savePresetsList(list)
+        if editingPresetOriginalURL == url {
+            beginCreateMode()
+        }
         presetsVersion += 1
     }
 
@@ -370,23 +357,20 @@ struct URLInputSheet: View {
         }
     }
 
-    private func savePreset(
-        url: String,
-        name: String,
-        startCommand: String?,
-        stopCommand: String?,
-        stopOnClose: Bool,
-        iconPath: String? = nil
-    ) {
-        let existing = loadPresets().first(where: { $0.url == url })
-        var list = loadPresets().filter { $0.url != url }
+    private func savePreset(config: WindowConfig, replacingURL: String? = nil) {
+        let existing = loadPresets().first { entry in
+            entry.url == config.url || entry.url == replacingURL
+        }
+        var list = loadPresets().filter { entry in
+            entry.url != config.url && entry.url != replacingURL
+        }
         var entry = URLEntry(
-            url: url,
-            name: name,
-            startCommand: startCommand,
-            stopCommand: stopCommand,
-            stopOnClose: stopOnClose,
-            iconPath: iconPath
+            url: config.url,
+            name: config.name,
+            startCommand: config.startCommand,
+            stopCommand: config.stopCommand,
+            stopOnClose: config.stopOnClose,
+            iconPath: config.iconPath
         )
         entry.pinned = existing?.isPinned ?? false
         let insertionIndex = entry.isPinned ? 0 : list.prefix { $0.isPinned }.count
@@ -396,13 +380,9 @@ struct URLInputSheet: View {
 
     private func openPreset(_ entry: URLEntry, forceNewWindow: Bool = false) {
         if shouldOpenPresetInCurrentWindow(forceNewWindow: forceNewWindow) {
-            inputURL = entry.url
-            inputName = entry.name
-            inputStartCommand = entry.startCommand ?? ""
-            inputStopCommand = entry.stopCommand ?? ""
-            stopServiceOnClose = entry.shouldStopOnClose
-            iconPath = entry.iconPath ?? ""
-            saveAndClose()
+            apply(config: entry.makeWindowConfig())
+            hasChanges = false
+            isPresented = false
         } else {
             openInNewWindow(entry.makeWindowConfig())
         }
@@ -441,15 +421,10 @@ struct URLInputSheet: View {
     }
 
     private func limitedPresets(_ list: [URLEntry]) -> [URLEntry] {
-        var normalized = orderedPresets(from: list)
-        while normalized.count > 10 {
-            if let index = normalized.lastIndex(where: { !$0.isPinned }) {
-                normalized.remove(at: index)
-            } else {
-                normalized.removeLast()
-            }
-        }
-        return normalized
+        let normalized = orderedPresets(from: list)
+        let pinned = normalized.filter { $0.isPinned }
+        let unpinned = normalized.filter { !$0.isPinned }
+        return pinned + Array(unpinned.prefix(20))
     }
 
     // MARK: - Browse Script
@@ -515,13 +490,52 @@ struct URLInputSheet: View {
         return img
     }
 
-    private func loadFromWindowConfig() {
-        inputURL = windowConfig.url
-        inputName = windowConfig.name
-        inputStartCommand = windowConfig.startCommand ?? ""
-        inputStopCommand = windowConfig.stopCommand ?? ""
-        stopServiceOnClose = windowConfig.stopOnClose
-        iconPath = windowConfig.iconPath ?? ""
+    private func beginCreateMode() {
+        inputURL = ""
+        inputName = ""
+        inputStartCommand = ""
+        inputStopCommand = ""
+        stopServiceOnClose = false
+        iconPath = ""
+        baselineConfig = WindowConfig()
+        editingPresetOriginalURL = nil
+        hasChanges = false
+        urlValidationMessage = nil
+    }
+
+    private func beginEditMode(with entry: URLEntry) {
+        let config = entry.makeWindowConfig()
+        inputURL = config.url
+        inputName = config.name
+        inputStartCommand = config.startCommand ?? ""
+        inputStopCommand = config.stopCommand ?? ""
+        stopServiceOnClose = config.stopOnClose
+        iconPath = config.iconPath ?? ""
+        baselineConfig = config
+        editingPresetOriginalURL = entry.url
+        hasChanges = false
+        urlValidationMessage = nil
+    }
+
+    private func makeDraftConfig() -> WindowConfig {
+        WindowConfig(
+            id: windowConfig.id,
+            url: normalized(inputURL),
+            name: normalized(inputName),
+            iconPath: normalized(iconPath).isEmpty ? nil : normalized(iconPath),
+            startCommand: normalized(inputStartCommand).isEmpty ? nil : normalized(inputStartCommand),
+            stopCommand: normalized(inputStopCommand).isEmpty ? nil : normalized(inputStopCommand),
+            stopOnClose: stopServiceOnClose
+        )
+    }
+
+    private func apply(config: WindowConfig) {
+        windowConfig.url = config.url
+        windowConfig.name = config.name
+        windowConfig.startCommand = config.startCommand
+        windowConfig.stopCommand = config.stopCommand
+        windowConfig.stopOnClose = config.stopOnClose
+        windowConfig.iconPath = config.iconPath
     }
 
     private func normalized(_ value: String) -> String {

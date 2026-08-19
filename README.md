@@ -9,9 +9,9 @@ Originally built to wrap [Hermes WebUI](https://github.com/nesquena/hermes-webui
 ## Features
 
 - **Single-app multi-window** — open multiple independent web windows under one Dock icon, with `⌘N`
-- **Restore last page** — reopen the last used single page on launch, and fall back to a blank setup window when no saved page is available
+- **Restore last window session** — reopen every configured window from the previous session on launch, and fall back to a blank setup window when nothing is saved
 - **Custom display name** — shown in the window title bar
-- **URL history** — remembers up to 10 recent URLs with pin support for favorites
+- **URL history** — remembers up to 20 non-pinned URLs, while pinned favorites remain unlimited
 - **Custom preset icon** — pick any local image as a visual marker in the preset list
 - **Local service auto-start** — attach a `start` command to local URL presets and launch services automatically
 - **Optional stop-on-close per preset** — enable stopping a service when the window closes and provide a matching `stop` command
@@ -25,7 +25,7 @@ Originally built to wrap [Hermes WebUI](https://github.com/nesquena/hermes-webui
 1. Launch `Windowed.app`
 2. Enter a display name (optional) and URL
 3. The web page loads in a native macOS window
-4. Use `⌘U` or the gear button to change the current window URL anytime
+4. Use `⌘U` or the gear button to open a blank setup sheet, then save to replace the current window contents
 5. Press `⌘N` to open a new blank window
 
 ### Multi-window
@@ -33,11 +33,13 @@ Originally built to wrap [Hermes WebUI](https://github.com/nesquena/hermes-webui
 - `⌘N` opens a new independent window
 - Each window has its own URL, display name, and service lifecycle
 - Clicking a history preset opens it in a new window by default
+- The setup sheet always starts blank; only the History edit button loads an existing preset into edit mode
 
 ### Launch behavior
 
-- On launch, Windowed first tries to restore the last used single page
-- If there is no saved page, it opens a blank setup window instead
+- On launch, Windowed first tries to restore every configured window from the previous session
+- Blank setup windows and unsaved drafts are not restored
+- If there is no saved session, it opens a blank setup window instead
 - Blank setup windows size themselves to about `70%` of the visible screen width and `80%` of the visible screen height
 
 ### Local Service Presets
@@ -48,7 +50,7 @@ If your target is a local service such as `http://127.0.0.1:18789/chat?session=m
 - **Stop service when window closes** — enabled per preset, off by default
 - **Stop command** — for example `~/hermes-webui/ctl.sh stop`
 
-Windowed will try to start the service when that preset opens, and only run the stop command on window close or app termination when you explicitly enable it.
+Windowed will try to start the service when that preset opens, including when a saved window is restored on the next launch. It only runs the stop command on window close or app termination when that preset explicitly enables it.
 
 ### Custom Icon
 
@@ -153,7 +155,7 @@ No third-party dependencies. One `Package.swift`, five source files.
 ├─────────────────────────────────────────────┤
 │  URLInputSheet                              │
 │  ├─ Display name + URL input                │
-│  ├─ History list (up to 10, with pinning)   │
+│  ├─ History list (20 regular, unlimited pinned) │
 │  ├─ Start / stop command settings           │
 │  └─ Icon picker (NSOpenPanel → bundle)      │
 └─────────────────────────────────────────────┘
