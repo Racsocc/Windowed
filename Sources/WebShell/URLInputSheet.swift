@@ -20,82 +20,24 @@ struct URLInputSheet: View {
     @State private var editingPresetOriginalURL: String? = nil
 
     var body: some View {
+        let presets = loadPresets()
+        let _ = presetsVersion
+
         VStack(spacing: 0) {
             // Icon
             iconSection
                 .padding(.top, 28)
                 .padding(.bottom, 24)
 
-            // Fields
-            Form {
-                Section {
-                    TextField("Name", text: $inputName, prompt: Text("e.g. Hermes WebUI"))
-                    TextField("URL", text: $inputURL, prompt: Text("http://127.0.0.1:8787"))
-                        .font(.system(.callout, design: .monospaced))
-                        .onSubmit { saveAndClose() }
-                    if let urlValidationMessage {
-                        Text(urlValidationMessage)
-                            .font(.caption)
-                            .foregroundStyle(.red)
-                    }
-                }
+            settingsForm
+                .padding(.horizontal, 20)
 
-                Section {
-                    HStack(alignment: .center) {
-                        commandField(
-                            text: $inputStartCommand,
-                            placeholder: "~/hermes-webui/ctl.sh start"
-                        )
-                        Button("Browse…") { pickScript() }
-                            .controlSize(.small)
-                    }
-                    Toggle("Stop service when window closes", isOn: $stopServiceOnClose)
-                    if stopServiceOnClose {
-                        HStack(alignment: .center) {
-                            commandField(
-                                text: $inputStopCommand,
-                                placeholder: "~/hermes-webui/ctl.sh stop"
-                            )
-                            Button("Browse…") { pickStopScript() }
-                                .controlSize(.small)
-                        }
-                    }
-                } header: {
-                    Text("Auto-start")
-                } footer: {
-                    Text("Type a command directly or browse to select a script. Add the appropriate argument for your script (e.g. start, run, up, serve). If you enable stop-on-close, provide a matching stop command such as stop or down.")
-                }
-
-                let presets = loadPresets()
-                let _ = presetsVersion  // force re-render on delete
-                if !presets.isEmpty {
-                    Section("History") {
-                        ForEach(presets, id: \.url) { entry in
-                            presetRow(entry)
-                        }
-                    }
-                }
-            }
-            .formStyle(.grouped)
-            .scrollContentBackground(.hidden)
-            .frame(width: 550, height: presetsHeight)
-            .alert("Delete this entry?", isPresented: Binding(
-                get: { pendingDelete != nil },
-                set: { if !$0 { pendingDelete = nil } }
-            )) {
-                Button("Cancel", role: .cancel) { pendingDelete = nil }
-                Button("Delete", role: .destructive) {
-                    if let entry = pendingDelete {
-                        deletePreset(url: entry.url)
-                        pendingDelete = nil
-                    }
-                }
-                if let entry = pendingDelete {
-                    Text(entry.name.isEmpty ? entry.url : entry.name)
-                }
+            if !presets.isEmpty {
+                historySection(presets)
+                    .padding(.top, 16)
+                    .padding(.horizontal, 20)
             }
 
-            // Buttons
             HStack {
                 Button("Cancel") {
                     isPresented = false
@@ -113,6 +55,21 @@ struct URLInputSheet: View {
         .background(Color(nsColor: .windowBackgroundColor))
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .shadow(color: .black.opacity(0.2), radius: 20, y: 10)
+        .alert("Delete this entry?", isPresented: Binding(
+                get: { pendingDelete != nil },
+                set: { if !$0 { pendingDelete = nil } }
+            )) {
+                Button("Cancel", role: .cancel) { pendingDelete = nil }
+                Button("Delete", role: .destructive) {
+                    if let entry = pendingDelete {
+                        deletePreset(url: entry.url)
+                        pendingDelete = nil
+                    }
+                }
+                if let entry = pendingDelete {
+                    Text(entry.name.isEmpty ? entry.url : entry.name)
+                }
+            }
         .onAppear {
             beginCreateMode()
         }
@@ -128,6 +85,51 @@ struct URLInputSheet: View {
     }
 
     // MARK: - Icon
+
+    private var settingsForm: some View {
+        Form {
+            Section {
+                TextField("Name", text: $inputName, prompt: Text("e.g. Hermes WebUI"))
+                TextField("URL", text: $inputURL, prompt: Text("http://127.0.0.1:8787"))
+                    .font(.system(.callout, design: .monospaced))
+                    .onSubmit { saveAndClose() }
+                if let urlValidationMessage {
+                    Text(urlValidationMessage)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
+            }
+
+            Section {
+                HStack(alignment: .center) {
+                    commandField(
+                        text: $inputStartCommand,
+                        placeholder: "~/hermes-webui/ctl.sh start"
+                    )
+                    Button("Browse…") { pickScript() }
+                        .controlSize(.small)
+                }
+                Toggle("Stop service when window closes", isOn: $stopServiceOnClose)
+                if stopServiceOnClose {
+                    HStack(alignment: .center) {
+                        commandField(
+                            text: $inputStopCommand,
+                            placeholder: "~/hermes-webui/ctl.sh stop"
+                        )
+                        Button("Browse…") { pickStopScript() }
+                            .controlSize(.small)
+                    }
+                }
+            } header: {
+                Text("Auto-start")
+            } footer: {
+                Text("Type a command directly or browse to select a script. Add the appropriate argument for your script (e.g. start, run, up, serve). If you enable stop-on-close, provide a matching stop command such as stop or down.")
+            }
+        }
+        .formStyle(.grouped)
+        .scrollContentBackground(.hidden)
+        .frame(width: 510, height: 320)
+    }
 
     private func commandField(text: Binding<String>, placeholder: String) -> some View {
         AppKitCommandField(text: text, placeholder: placeholder)
@@ -283,10 +285,37 @@ struct URLInputSheet: View {
 
     // MARK: - Helpers
 
-    private var presetsHeight: CGFloat {
-        let count = loadPresets().count
-        let baseHeight: CGFloat = (count == 0) ? 320 : CGFloat(280 + min(count, 5) * 56)
-        return max(800, baseHeight)
+    private func historySection(_ presets: [URLEntry]) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("History")
+                .font(.headline)
+                .foregroundStyle(.secondary)
+
+            ScrollView(.vertical, showsIndicators: true) {
+                LazyVStack(spacing: 0) {
+                    ForEach(presets, id: \.url) { entry in
+                        presetRow(entry)
+                            .padding(.vertical, 4)
+
+                        if entry.url != presets.last?.url {
+                            Divider()
+                                .opacity(0.35)
+                        }
+                    }
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+            }
+            .frame(minHeight: 180, maxHeight: 260)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(Color(nsColor: .controlBackgroundColor))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(Color(nsColor: .separatorColor).opacity(0.35), lineWidth: 1)
+            )
+        }
     }
 
     private func saveAndClose() {

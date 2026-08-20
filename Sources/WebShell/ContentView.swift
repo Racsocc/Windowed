@@ -14,6 +14,11 @@ struct ContentView: View {
     @State private var hostWindow: NSWindow?
     @State private var hasAppliedInitialWindowSize: Bool = false
 
+    private let blankWindowWidthRatio: CGFloat = 0.72
+    private let blankWindowHeightRatio: CGFloat = 0.88
+    private let loadedWindowWidthRatio: CGFloat = 0.78
+    private let loadedWindowHeightRatio: CGFloat = 0.86
+
     private var startCommand: String? {
         guard let cmd = windowConfig.startCommand?.trimmingCharacters(in: .whitespacesAndNewlines),
               !cmd.isEmpty else { return nil }
@@ -90,7 +95,7 @@ struct ContentView: View {
                 .disabled(currentURL.isEmpty)
             }
         }
-        .frame(minWidth: 800, minHeight: currentURL.isEmpty ? 800 : 500)
+        .frame(minWidth: currentURL.isEmpty ? 720 : 800, minHeight: currentURL.isEmpty ? 620 : 500)
         .alert("Discard changes?", isPresented: $showDiscardAlert) {
             Button("Discard", role: .destructive) {
                 showURLSheet = false
@@ -306,10 +311,10 @@ struct ContentView: View {
         let visibleFrame = window.screen?.visibleFrame ?? NSScreen.main?.visibleFrame ?? .zero
         guard visibleFrame.width > 0, visibleFrame.height > 0 else { return }
 
-        let widthRatio: CGFloat = currentURL.isEmpty ? 0.7 : 0.72
-        let heightRatio: CGFloat = currentURL.isEmpty ? 0.8 : 0.82
-        let minimumWidth: CGFloat = currentURL.isEmpty ? 800 : 1000
-        let minimumHeight: CGFloat = currentURL.isEmpty ? 800 : 700
+        let widthRatio = currentURL.isEmpty ? blankWindowWidthRatio : loadedWindowWidthRatio
+        let heightRatio = currentURL.isEmpty ? blankWindowHeightRatio : loadedWindowHeightRatio
+        let minimumWidth: CGFloat = currentURL.isEmpty ? 720 : 960
+        let minimumHeight: CGFloat = currentURL.isEmpty ? 620 : 700
 
         let targetContentWidth = min(max(minimumWidth, visibleFrame.width * widthRatio), visibleFrame.width)
         let targetContentHeight = min(max(minimumHeight, visibleFrame.height * heightRatio), visibleFrame.height)
@@ -335,15 +340,25 @@ struct ContentView: View {
         let visibleFrame = window.screen?.visibleFrame ?? NSScreen.main?.visibleFrame ?? .zero
         guard visibleFrame.width > 0, visibleFrame.height > 0 else { return }
 
-        let minimumContentSize = NSSize(width: 800, height: 820)
+        let minimumContentSize = NSSize(width: 720, height: 620)
+        let maximumContentSize = NSSize(
+            width: max(minimumContentSize.width, visibleFrame.width * 0.82),
+            height: max(minimumContentSize.height, visibleFrame.height * 0.88)
+        )
         let currentContentRect = window.contentLayoutRect
         let targetContentRect = NSRect(
             x: 0,
             y: 0,
-            width: min(max(currentContentRect.width, minimumContentSize.width), visibleFrame.width),
-            height: min(max(currentContentRect.height, minimumContentSize.height), visibleFrame.height)
+            width: min(max(currentContentRect.width, minimumContentSize.width), maximumContentSize.width),
+            height: min(max(currentContentRect.height, minimumContentSize.height), maximumContentSize.height)
         )
-        let targetFrame = window.frameRect(forContentRect: targetContentRect)
+        let rawTargetFrame = window.frameRect(forContentRect: targetContentRect)
+        let targetFrame = NSRect(
+            x: 0,
+            y: 0,
+            width: min(rawTargetFrame.width, visibleFrame.width),
+            height: min(rawTargetFrame.height, visibleFrame.height)
+        )
 
         guard window.frame.height < targetFrame.height || window.frame.width < targetFrame.width else {
             return

@@ -17,6 +17,7 @@ Originally built to wrap [Hermes WebUI](https://github.com/nesquena/hermes-webui
 - **Optional stop-on-close per preset** — enable stopping a service when the window closes and provide a matching `stop` command
 - **Native web dialog support** — supports `alert()`, `confirm()`, and `prompt()` for delete confirmations and input flows
 - **Web file upload support** — supports file, image, and multi-file selection with the native Finder panel
+- **External links and downloads hand off to the default browser** — regular links, `window.open()` / `_blank`, and download requests are opened outside the shell
 - **Zero dependencies** — pure SwiftUI + WebKit, no frameworks, no bundler
 - **Self-contained** — single .app, no install step
 
@@ -40,7 +41,19 @@ Originally built to wrap [Hermes WebUI](https://github.com/nesquena/hermes-webui
 - On launch, Windowed first tries to restore every configured window from the previous session
 - Blank setup windows and unsaved drafts are not restored
 - If there is no saved session, it opens a blank setup window instead
-- Blank setup windows size themselves to about `70%` of the visible screen width and `80%` of the visible screen height
+- Blank setup windows size themselves to about `72%` of the visible screen width and `88%` of the visible screen height, instead of forcing a fixed 800 px height on smaller screens
+
+### Link and download behavior
+
+- Clicking a regular hyperlink inside Windowed opens it in the system default browser
+- `target="_blank"`, `window.open()`, and contextual-menu new-window actions also hand off to the system default browser
+- Download links and contextual-menu download actions are handled by the system default browser
+- The shell window continues to host the original entry page, along with in-page routing, refreshes, and form flows
+
+### Setup window
+
+- The setup window now adapts to the visible screen height and stays roughly within the `80%` - `90%` range on smaller displays
+- History is shown in its own scrollable region, so a long preset list no longer stretches the whole window
 
 ### Local Service Presets
 
@@ -149,13 +162,13 @@ No third-party dependencies. One `Package.swift`, five source files.
 ├─────────────────────────────────────────────┤
 │  WebView (NSViewRepresentable)              │
 │  ├─ Wraps WKWebView for SwiftUI             │
-│  ├─ Handles navigation, errors, JS dialogs  │
+│  ├─ Handles navigation, browser handoff, errors, and JS dialogs │
 │  ├─ Handles web file upload                 │
 │  └─ Updates window title from page title    │
 ├─────────────────────────────────────────────┤
 │  URLInputSheet                              │
 │  ├─ Display name + URL input                │
-│  ├─ History list (20 regular, unlimited pinned) │
+│  ├─ History list (20 regular, unlimited pinned, scrollable) │
 │  ├─ Start / stop command settings           │
 │  └─ Icon picker (NSOpenPanel → bundle)      │
 └─────────────────────────────────────────────┘

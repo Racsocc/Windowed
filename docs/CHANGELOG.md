@@ -2,6 +2,20 @@
 
 本文件用于记录项目的重要功能、修复、架构调整与协作约定。
 
+## 2026-08-21
+
+- 类型：`fix`
+- 摘要：将网页外链、新窗口请求和下载请求统一交给系统默认浏览器，并修正设置窗口在小屏上的高度适配
+- 涉及文件：
+  - `Sources/WebShell/ContentView.swift`
+  - `Sources/WebShell/URLInputSheet.swift`
+  - `Sources/WebShell/WebView.swift`
+  - `README.md`
+  - `README_CN.md`
+  - `docs/CHANGELOG.md`
+- 验证情况：已通过 `swift build --disable-sandbox` 编译；GUI 交互仍需在本机继续手动确认
+- 后续事项：继续手动确认不同站点右键菜单中的下载动作是否都能稳定转交默认浏览器
+
 ## 1.0.1
 
 - 发布时间：2026-07-27

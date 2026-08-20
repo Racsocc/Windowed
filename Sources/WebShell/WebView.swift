@@ -67,11 +67,50 @@ struct WebView: NSViewRepresentable {
         }
 
         func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+            guard !shouldIgnore(error) else { return }
             showError(webView, error: error)
         }
 
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+            guard !shouldIgnore(error) else { return }
             showError(webView, error: error)
+        }
+
+        func webView(
+            _ webView: WKWebView,
+            decidePolicyFor navigationAction: WKNavigationAction,
+            decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
+        ) {
+            if navigationAction.shouldPerformDownload,
+               let url = navigationAction.request.url,
+               openExternally(url) {
+                decisionHandler(.cancel)
+                return
+            }
+
+            if navigationAction.navigationType == .linkActivated,
+               let url = navigationAction.request.url,
+               openExternally(url) {
+                decisionHandler(.cancel)
+                return
+            }
+
+            decisionHandler(.allow)
+        }
+
+        func webView(
+            _ webView: WKWebView,
+            decidePolicyFor navigationResponse: WKNavigationResponse,
+            decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void
+        ) {
+            if !navigationResponse.canShowMIMEType,
+               let url = navigationResponse.response.url,
+               openExternally(url) {
+                decisionHandler(.cancel)
+                return
+            }
+
+            decisionHandler(.allow)
         }
 
         func webView(
@@ -137,6 +176,18 @@ struct WebView: NSViewRepresentable {
             }
         }
 
+        func webView(
+            _ webView: WKWebView,
+            createWebViewWith configuration: WKWebViewConfiguration,
+            for navigationAction: WKNavigationAction,
+            windowFeatures: WKWindowFeatures
+        ) -> WKWebView? {
+            if let url = navigationAction.request.url {
+                _ = openExternally(url)
+            }
+            return nil
+        }
+
         private func showError(_ webView: WKWebView, error: Error) {
             let html = """
             <html><body style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:-apple-system,sans-serif;background:#fefefe;color:#333;">
@@ -176,6 +227,15 @@ struct WebView: NSViewRepresentable {
                 return host
             }
             return "This page says"
+        }
+
+        private func openExternally(_ url: URL) -> Bool {
+            NSWorkspace.shared.open(url)
+        }
+
+        private func shouldIgnore(_ error: Error) -> Bool {
+            let nsError = error as NSError
+            return nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled
         }
     }
 }
