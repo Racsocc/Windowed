@@ -56,21 +56,25 @@ struct ContentView: View {
 
             // Settings overlay
             if showURLSheet {
-                // Background overlay — captures taps
-                Color.black.opacity(0.3)
-                    .ignoresSafeArea()
-                    .onTapGesture {
-                        handleBackgroundTap()
-                    }
+                GeometryReader { proxy in
+                    // Background overlay — captures taps
+                    Color.black.opacity(0.3)
+                        .ignoresSafeArea()
+                        .onTapGesture {
+                            handleBackgroundTap()
+                        }
 
-                // Settings panel
-                URLInputSheet(
-                    windowConfig: $windowConfig,
-                    isPresented: $showURLSheet,
-                    hasChanges: $settingsHasChanges,
-                    openInNewWindow: openNewWindow
-                )
-                .transition(.scale.combined(with: .opacity))
+                    // Settings panel
+                    URLInputSheet(
+                        windowConfig: $windowConfig,
+                        isPresented: $showURLSheet,
+                        hasChanges: $settingsHasChanges,
+                        openInNewWindow: openNewWindow,
+                        containerSize: proxy.size
+                    )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .transition(.scale.combined(with: .opacity))
+                }
             }
         }
         .background(WindowAccessor(window: $hostWindow))
@@ -118,10 +122,6 @@ struct ContentView: View {
         }
         .onChange(of: hostWindow?.windowNumber ?? -1) { _, _ in
             applyInitialWindowSizeIfNeeded()
-        }
-        .onChange(of: showURLSheet) { _, isShowing in
-            guard isShowing else { return }
-            ensureSettingsSheetFits()
         }
         .onReceive(NotificationCenter.default.publisher(for: .windowedOpenSettingsRequested)) { _ in
             guard hostWindow?.isKeyWindow == true else { return }
@@ -332,44 +332,6 @@ struct ContentView: View {
         )
 
         window.setFrame(NSRect(origin: centeredOrigin, size: targetFrame.size), display: true, animate: false)
-    }
-
-    private func ensureSettingsSheetFits() {
-        guard let window = hostWindow else { return }
-
-        let visibleFrame = window.screen?.visibleFrame ?? NSScreen.main?.visibleFrame ?? .zero
-        guard visibleFrame.width > 0, visibleFrame.height > 0 else { return }
-
-        let minimumContentSize = NSSize(width: 720, height: 620)
-        let maximumContentSize = NSSize(
-            width: max(minimumContentSize.width, visibleFrame.width * 0.82),
-            height: max(minimumContentSize.height, visibleFrame.height * 0.88)
-        )
-        let currentContentRect = window.contentLayoutRect
-        let targetContentRect = NSRect(
-            x: 0,
-            y: 0,
-            width: min(max(currentContentRect.width, minimumContentSize.width), maximumContentSize.width),
-            height: min(max(currentContentRect.height, minimumContentSize.height), maximumContentSize.height)
-        )
-        let rawTargetFrame = window.frameRect(forContentRect: targetContentRect)
-        let targetFrame = NSRect(
-            x: 0,
-            y: 0,
-            width: min(rawTargetFrame.width, visibleFrame.width),
-            height: min(rawTargetFrame.height, visibleFrame.height)
-        )
-
-        guard window.frame.height < targetFrame.height || window.frame.width < targetFrame.width else {
-            return
-        }
-
-        let adjustedOrigin = NSPoint(
-            x: min(max(window.frame.minX, visibleFrame.minX), visibleFrame.maxX - targetFrame.width),
-            y: min(max(window.frame.maxY - targetFrame.height, visibleFrame.minY), visibleFrame.maxY - targetFrame.height)
-        )
-
-        window.setFrame(NSRect(origin: adjustedOrigin, size: targetFrame.size), display: true, animate: true)
     }
 }
 

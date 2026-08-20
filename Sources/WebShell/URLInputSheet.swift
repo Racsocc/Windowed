@@ -6,6 +6,7 @@ struct URLInputSheet: View {
     @Binding var isPresented: Bool
     @Binding var hasChanges: Bool
     let openInNewWindow: (WindowConfig) -> Void
+    let containerSize: CGSize
     @State private var inputURL: String = ""
     @State private var inputName: String = ""
     @State private var inputStartCommand: String = ""
@@ -22,21 +23,28 @@ struct URLInputSheet: View {
     var body: some View {
         let presets = loadPresets()
         let _ = presetsVersion
+        let layout = layoutMetrics()
 
         VStack(spacing: 0) {
-            // Icon
-            iconSection
-                .padding(.top, 28)
-                .padding(.bottom, 24)
+            ScrollView(.vertical, showsIndicators: true) {
+                VStack(spacing: 0) {
+                    iconSection
+                        .padding(.top, 28)
+                        .padding(.bottom, 24)
 
-            settingsForm
-                .padding(.horizontal, 20)
+                    settingsForm
+                        .padding(.horizontal, 20)
 
-            if !presets.isEmpty {
-                historySection(presets)
-                    .padding(.top, 16)
-                    .padding(.horizontal, 20)
+                    if !presets.isEmpty {
+                        historySection(presets)
+                            .padding(.top, 16)
+                            .padding(.horizontal, 20)
+                            .padding(.bottom, 12)
+                    }
+                }
+                .frame(maxWidth: .infinity)
             }
+            .frame(height: layout.scrollAreaHeight)
 
             HStack {
                 Button("Cancel") {
@@ -51,7 +59,7 @@ struct URLInputSheet: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 16)
         }
-        .frame(width: 550)
+        .frame(width: layout.panelWidth, height: layout.panelHeight)
         .background(Color(nsColor: .windowBackgroundColor))
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .shadow(color: .black.opacity(0.2), radius: 20, y: 10)
@@ -85,6 +93,21 @@ struct URLInputSheet: View {
     }
 
     // MARK: - Icon
+
+    private func layoutMetrics() -> PanelLayoutMetrics {
+        let panelWidth = min(550, max(460, containerSize.width - 48))
+        let maxPanelHeight = max(320, containerSize.height - 32)
+        let targetPanelHeight = containerSize.height * 0.85
+        let panelHeight = min(maxPanelHeight, max(360, targetPanelHeight))
+        let buttonSectionHeight: CGFloat = 72
+        let scrollAreaHeight = max(220, panelHeight - buttonSectionHeight)
+
+        return PanelLayoutMetrics(
+            panelWidth: panelWidth,
+            panelHeight: panelHeight,
+            scrollAreaHeight: scrollAreaHeight
+        )
+    }
 
     private var settingsForm: some View {
         Form {
@@ -128,7 +151,7 @@ struct URLInputSheet: View {
         }
         .formStyle(.grouped)
         .scrollContentBackground(.hidden)
-        .frame(width: 510, height: 320)
+        .frame(maxWidth: .infinity)
     }
 
     private func commandField(text: Binding<String>, placeholder: String) -> some View {
@@ -306,7 +329,7 @@ struct URLInputSheet: View {
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
             }
-            .frame(minHeight: 180, maxHeight: 260)
+            .frame(minHeight: 160)
             .background(
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .fill(Color(nsColor: .controlBackgroundColor))
@@ -686,4 +709,10 @@ struct URLEntry: Codable, Hashable {
 
     var isPinned: Bool { pinned == true }
     var shouldStopOnClose: Bool { stopOnClose == true }
+}
+
+private struct PanelLayoutMetrics {
+    let panelWidth: CGFloat
+    let panelHeight: CGFloat
+    let scrollAreaHeight: CGFloat
 }
